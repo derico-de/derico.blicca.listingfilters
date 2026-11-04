@@ -1,53 +1,189 @@
-# Derico Blicca Listingfilters
+# derico.blicca.listingfilters
 
-Listing filters for Plone Blicca: visitors narrow a listing by tags, other properties or a text search, with options from that listing's own results
+**Listing filters** for the Listing block of the Aurora editor in [Plone](https://plone.org) Blicca.
+Blicca is the former Plone Classic UI. Staff add filters to a listing they
+already have, and visitors narrow it by tags, other properties or a text
+search. The options come from that listing's own results, never from every
+tag on the site.
+
+Typical uses:
+
+- a news or event listing narrowed by topic;
+- a publications page narrowed by type and a text search;
+- a tag filter limited to the few topics an editor wants to offer, in their
+  chosen order.
+
+The add-on replaces the Listing block's rendering and adds a setting to its
+sidebar. Staff keep a single listing block, one query serves the results and
+the options, and a listing with no filters renders exactly as it did.
 
 ## Features
 
-- Compatible with Plone 6.2+
+- **Options from the listing's own results.** A value that finds nothing is
+  not offered. Under each filter, the options reflect the other filters'
+  selections, and a filter ignores its own, so a visitor can widen the
+  selection again.
+- **Any catalog property with values**, such as the Tag, the type or the
+  state, and a **text search**.
+- **An allow list per filter.** Staff choose from all the site's values. The
+  list limits the options and sets their order.
+- **Links, not scripts.** Every option is a link, the search is a plain form.
+  The selection is in the URL, per block, so several listings on one page
+  stay independent and a narrowed listing can be bookmarked.
+- **A pager over the narrowed results**, within the listing's own batch size
+  and limit.
+- **Translated** into German.
+
+## Requirements
+
+- Plone 6.2 or later, Blicca only
+- [plone.blicca.auroraeditor](https://github.com/derico-de/plone.blicca.auroraeditor)
+  later than 1.0.0a6, for its listing seams
+
+The JavaScript bundle is committed to the package. No Node is needed at
+install time.
 
 ## Installation
 
-Add `derico.blicca.listingfilters` to your project's dependencies:
+Add the package to your project's dependencies:
 
-```python
-# In your pyproject.toml
+```toml
+# pyproject.toml
 dependencies = [
     "derico.blicca.listingfilters",
-    # ...
 ]
 ```
 
-Then activate the addon in your Plone site's control panel or via GenericSetup.
+Then install **Derico Blicca Listingfilters** from Plone's Add-ons control
+panel, or apply the `derico.blicca.listingfilters:default` profile.
+
+Only one add-on can own the Listing block. This one declares
+`overrides: ["listing"]`, so it cannot be combined with another add-on that
+does the same.
+
+## Using the filters
+
+Select a Listing block in the editor and open **Filters** in the sidebar.
+
+- **Add filter** adds a row. Choose its property, and optionally a title in
+  place of the property's own.
+- **Allowed values** is the allow list. With none chosen, every value found
+  in the results is offered.
+- The arrows reorder the filters and the allowed values, the cross removes
+  them.
+- The canvas previews the filters. In the editor its options and search do
+  nothing, so a click stays in the editor.
+
+A property is offered when it has a catalog index configured for
+`plone.app.querystring` with values to choose from, or a vocabulary. To be
+narrowed by, it also needs a catalog metadata column.
+
+## Rendered markup
+
+Filters render above the results, the pager below them:
+
+```html
+<div class="listing-filters" id="listing-<block id>" role="group">
+  <form class="listing-filters-search" role="search">
+    <fieldset>
+      <label>
+        <span class="listing-filter-label">Search</span>
+        <input type="search" name="<block id>.SearchableText">
+      </label>
+      <button type="submit">Search</button>
+    </fieldset>
+  </form>
+  <div class="listing-filter">
+    <p class="listing-filter-title">Topic</p>
+    <ul class="listing-filter-options" data-listing-filter="Subject">
+      <li><a href="…" aria-current="true">News</a></li>
+    </ul>
+  </div>
+  <a class="listing-filters-reset" href="…">Reset filters</a>
+</div>
+<!-- the listing's items -->
+<nav class="listing-pager" aria-label="Result pages">
+  <a rel="prev" href="…">Previous</a>
+  <span>Page 2 of 3</span>
+  <a rel="next" href="…">Next</a>
+</nav>
+```
+
+## How it works
+
+The add-on registers its own `aurora-block-listing` view on a browser layer
+that extends the core block's. It takes the base results from the core
+listing's query, then narrows them in Python over the brains' metadata. That
+way a filter narrows even on an index the listing's own query already uses.
+The text search goes through the catalog, limited to the base results by UID.
+
+A filter's options ignore its own selection. Results and options are cached
+together with
+`plone.memoize.ram`, keyed by the context, the block's query and selection,
+the user's allowed roles, the language and the catalog's counter, and for at
+most five minutes, as effective ranges and relative dates move on without the
+catalog changing.
+
+Selections travel as `<block id>.<property>` parameters. Parameters of other
+blocks are kept in every link.
+
+Disabling the block override's registry record gives the editor back the core
+block, while pages keep rendering this one. Uninstalling leaves `filters` in
+stored blocks, which the core block ignores, so reinstalling brings them back.
+
+Known limit: the core block's serializer still resolves its `items` for a
+filtered listing. That is one capped query the view does not use.
+
+## Theming
+
+The stylesheet is `@scope`-wrapped to the editor and the public blocks view.
+Its rules descend from `.listing-filters` or `.listing-pager`. A theme sets
+these custom properties, none of which the add-on declares, so an inherited
+value wins:
+
+| Custom property | Default | Sets |
+| --- | --- | --- |
+| `--listing-filters-gap` | `1rem` | the space between the filters, and around them and the pager |
+| `--listing-filters-radius` | `1rem` | an option's corners |
+| `--listing-filters-accent` | `--bs-primary`, then `#0b5cad` | a selected option and the search button |
+| `--listing-filters-accent-contrast` | `#fff` | the text on the accent |
 
 ## Development
 
-### Setup
-
 ```bash
-# Clone the repository
-git clone https://github.com/collective/derico.blicca.listingfilters.git
-cd derico.blicca.listingfilters
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate
-
-# Install in development mode
-pip install -e ".[test]"
+uv run --extra test pytest
 ```
 
-### Running Tests
+`bundle-src/` holds the editor half as a Vite library build. Its output is
+committed to `src/derico/blicca/listingfilters/static/`:
 
 ```bash
-pytest
+cd bundle-src
+pnpm install
+pnpm test
+pnpm typecheck
+pnpm build
 ```
 
-### Running Tests with Coverage
+`e2e/` drives the add-on in a running site with playwright-core: in the
+editor, adding a Tag filter with an allow list and a text search, and saving;
+on the page, as a visitor, the options, the pager, a selected option, the
+search and reset, next to a listing without filters. It builds its fixture in
+the site `AURORA_E2E_BASE` names and removes it again; the add-on must be
+installed there. Plone leaves `127.0.0.1` unthemed, so use a host name.
 
 ```bash
-pytest --cov=derico.blicca.listingfilters --cov-report=html
+cd e2e
+pnpm install
+AURORA_E2E_BASE=http://localhost:8080/Plone AURORA_E2E_PAGE_TYPE=Article pnpm e2e
 ```
+
+`AURORA_E2E_USER`, `AURORA_E2E_PASSWORD`, `AURORA_E2E_CHROMIUM` (a Chromium
+executable) and `AURORA_E2E_SHOTS` (a directory for screenshots) are optional;
+the header of `e2e/listing-filters.e2e.js` lists them.
+
+Every change to a GenericSetup profile XML file needs an upgrade step, even
+in an alpha release. Scaffold it with `plonecli add upgrade_step`.
 
 ## License
 
@@ -55,4 +191,4 @@ GPL-2.0-or-later
 
 ## Author
 
-Maik Derstappen <md@derico.de>
+Maik Derstappen, [derico.de](https://derico.de), <md@derico.de>
