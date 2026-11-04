@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<registry>
+
+  <!-- Lockstep with the browser layer the uninstall profile also removes: an
+       orphaned record would keep loading the bundle. Stored `filters` stay in
+       the blocks, where the core listing ignores them. -->
+  <records
+      interface="plone.blicca.auroraeditor.interfaces.IAuroraBlockAddon"
+      prefix="plone.blicca.auroraeditor.blockaddons/derico.blicca.listingfilters.listing"
+      remove="true"
+      />
+
+</registry>

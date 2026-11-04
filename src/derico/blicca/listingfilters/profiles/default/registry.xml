@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<registry>
+
+  <!-- Takes the core `listing` over (block add-on contract §3.2, ADR 0025):
+       its bundle adds the filters setting to the core block's schema and its
+       view extends the core one. `overrides` is what keeps the clash gate from
+       skipping this record; `types` alone would be an undeclared clash. -->
+  <records
+      interface="plone.blicca.auroraeditor.interfaces.IAuroraBlockAddon"
+      prefix="plone.blicca.auroraeditor.blockaddons/derico.blicca.listingfilters.listing"
+      >
+    <value key="bundle">++plone++derico.blicca.listingfilters/listing-filters.js</value>
+    <value key="css">++plone++derico.blicca.listingfilters/listing-filters.css</value>
+    <value key="types">
+      <element>listing</element>
+    </value>
+    <value key="overrides">
+      <element>listing</element>
+    </value>
+    <value key="enabled">True</value>
+    <value key="weight">100</value>
+  </records>
+
+</registry>
