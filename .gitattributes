@@ -1,0 +1,3 @@
+# Committed build output: binary in diffs, collapsed on GitHub.
+src/derico/blicca/listingfilters/static/** -diff linguist-generated
+src/derico/blicca/listingfilters/static/README.md diff -linguist-generated
