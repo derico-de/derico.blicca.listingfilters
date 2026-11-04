@@ -1,7 +1,8 @@
 /* E2E: staff set up filters on a listing, visitors narrow it.
  *
  *  1. In the editor, the listing's Filters setting adds a Tag filter with an
- *     allow list and a text search. The canvas narrows like a public page:
+ *     allow list, a text search and the results per page. The canvas narrows
+ *     like a public page:
  *     options, the live search from the third letter, the pager and reset
  *     all work, stay in the editor, and none of it is stored.
  *  2. Saved, a visitor sees the allow list's options, in its order. An
@@ -102,14 +103,14 @@ async function until(read, expected, what, timeout = 8000) {
 const shownTitles = async (listing) =>
   (await listing.locator('.listing-items :is(h2, h3, h4)').allTextContents()).map((title) => title.trim());
 
-const listingBlock = (id, headline) => ({
+const listingBlock = (id, headline, paging = { b_size: 2 }) => ({
   type: 'ploneBlock',
   '@type': 'listing',
   id,
   headline,
   variation: 'summary',
   querystring: {
-    b_size: 2,
+    ...paging,
     sort_on: 'sortable_title',
     query: [
       { i: 'path', o: 'plone.app.querystring.operation.string.absolutePath', v: `/${FOLDER_ID}::1` },
@@ -138,7 +139,7 @@ async function buildFixture() {
         '@type': '__somersault__',
         value: [
           { type: 'title', children: [{ text: 'Listing filters e2e page' }] },
-          listingBlock(BLOCK_ID, 'Filtered'),
+          listingBlock(BLOCK_ID, 'Filtered', {}),
           listingBlock('plain', 'Plain'),
         ],
       },
@@ -197,6 +198,11 @@ async function setUpFiltersInTheEditor(page) {
     { timeout: 15000 },
   );
   expectEqual(await options.allTextContents(), [GREEN, RED], 'the canvas previews the filters');
+  await until(() => shownTitles(block), ['Alpha', 'Beta', 'Gamma'], 'all results fit the default page');
+  const batchSize = sidebar.getByLabel('Results per page');
+  expectEqual(await batchSize.getAttribute('type'), 'number', 'the batch size takes a number');
+  await batchSize.fill('2');
+  await until(() => shownTitles(block), ['Alpha', 'Beta'], 'the canvas pages by the batch size');
   const editing = page.url();
   await narrowOnTheCanvas(page, block, options);
   expectEqual(page.url(), editing, 'narrowing the preview stays in the editor');
@@ -215,6 +221,7 @@ async function setUpFiltersInTheEditor(page) {
     ],
     'the setting is stored',
   );
+  expectEqual(Number(stored.batchSize), 2, 'the batch size is stored');
   expectEqual(stored.filtersPreview, undefined, 'what narrowed the preview is not stored');
 }
 

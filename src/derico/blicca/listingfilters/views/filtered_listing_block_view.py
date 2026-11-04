@@ -198,7 +198,8 @@ class FilteredListingBlockView(ListingBlockView):
 
     @cached_property
     def page_size(self):
-        return result_cap(self.querystring)
+        b_size = (self.data or {}).get("batchSize") or self.querystring.get("b_size")
+        return result_cap({**self.querystring, "b_size": b_size})
 
     @cached_property
     def start(self):
