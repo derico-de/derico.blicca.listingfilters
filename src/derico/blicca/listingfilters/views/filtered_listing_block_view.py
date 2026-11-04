@@ -1,6 +1,7 @@
 """The core listing block, with filters a visitor narrows it by."""
 
 import json
+from collections import namedtuple
 from functools import cached_property
 from time import time
 from urllib.parse import parse_qsl
@@ -32,6 +33,8 @@ from derico.blicca.listingfilters.i18n import _
 TEXT_FIELD = "SearchableText"
 # Effective ranges and relative dates move on without the catalog changing.
 RECHECK_SECONDS = 300
+
+Narrowed = namedtuple("Narrowed", "results options selected")
 
 
 def _as_values(value):
@@ -73,9 +76,36 @@ def _cache_key(_fun, context, _request, querystring, allow_lists, chosen, term):
     )
 
 
+def _field_record(field, name):
+    return getUtility(IRegistry).get(f"plone.app.querystring.field.{field}.{name}")
+
+
+def _vocabulary(context, field):
+    name = _field_record(field, "vocabulary")
+    factory = queryUtility(IVocabularyFactory, name) if name else None
+    return factory(context) if factory is not None else None
+
+
+def _value_title(vocabulary, value, request):
+    if vocabulary is None:
+        return value
+    try:
+        title = vocabulary.getTerm(value).title
+    except LookupError:
+        return value
+    return translate(title, context=request) if title else value
+
+
+def _titled(context, request, field, values):
+    if not values:
+        return {}
+    vocabulary = _vocabulary(context, field)
+    return {value: _value_title(vocabulary, value, request) for value in values}
+
+
 @ram.cache(_cache_key)
 def _narrowed(context, request, querystring, allow_lists, chosen, term):
-    """One query serves results and options: ``(rids, options, selected)``."""
+    """One query serves results and options, which map each value to its title."""
     limit = _limit(querystring)
     brains = listing_brains(context, request, {"querystring": querystring}, limit=limit)
     if limit:
@@ -87,7 +117,8 @@ def _narrowed(context, request, querystring, allow_lists, chosen, term):
     catalog = getToolByName(context, "portal_catalog")
     text_matches = _text_matches(catalog, brains, term) if term else None
     results, options, selected = narrow(entries, allow_lists, chosen, text_matches)
-    return tuple(results), options, selected
+    titled = {field: _titled(context, request, field, options[field]) for field in options}
+    return Narrowed(tuple(results), titled, selected)
 
 
 class FilteredListingBlockView(ListingBlockView):
@@ -157,21 +188,9 @@ class FilteredListingBlockView(ListingBlockView):
             munge_search_term(self.term),
         )
 
-    @property
-    def results(self):
-        return self.narrowed[0]
-
-    @property
-    def options(self):
-        return self.narrowed[1]
-
-    @property
-    def selected(self):
-        return self.narrowed[2]
-
     @cached_property
     def page_size(self):
-        return result_cap({"b_size": self.querystring.get("b_size")})
+        return result_cap(self.querystring)
 
     @cached_property
     def start(self):
@@ -179,14 +198,14 @@ class FilteredListingBlockView(ListingBlockView):
             sent = max(int(self._sent("b_start")), 0)
         except (TypeError, ValueError):
             sent = 0
-        last = (len(self.results) - 1) // self.page_size * self.page_size
+        last = (len(self.narrowed.results) - 1) // self.page_size * self.page_size
         return min(sent, max(last, 0))
 
     def summaries(self):
         if not self.filters:
             return super().summaries()
         catalog = getToolByName(self.context, "portal_catalog")._catalog
-        page = self.results[self.start : self.start + self.page_size]
+        page = self.narrowed.results[self.start : self.start + self.page_size]
         return summarize_brains(self.request, [catalog[rid] for rid in page])
 
     @cached_property
@@ -223,45 +242,23 @@ class FilteredListingBlockView(ListingBlockView):
     def anchor(self):
         return f"listing-{self.block_id}" if self.block_id else None
 
-    @cached_property
-    def _registry(self):
-        return getUtility(IRegistry)
-
-    def _field_record(self, field, name):
-        return self._registry.get(f"plone.app.querystring.field.{field}.{name}")
-
     def _title_of(self, field):
-        title = self._field_record(field, "title") or field
+        title = _field_record(field, "title") or field
         return translate(title, domain="plone", context=self.request)
 
-    def _value_title(self, vocabulary, value):
-        if vocabulary is None:
-            return value
-        try:
-            title = vocabulary.getTerm(value).title
-        except LookupError:
-            return value
-        return translate(title, context=self.request) if title else value
-
-    def _vocabulary(self, field):
-        name = self._field_record(field, "vocabulary")
-        factory = queryUtility(IVocabularyFactory, name) if name else None
-        return factory(self.context) if factory is not None else None
-
     def _option(self, field, value, title):
-        picked = self.selected[field]
+        picked = self.narrowed.selected[field]
         toggled = picked ^ {value}
         return {
             "title": title,
             "selected": value in picked,
-            "href": self._href({**self.selected, field: toggled}, self.term),
+            "href": self._href({**self.narrowed.selected, field: toggled}, self.term),
         }
 
     def _options_group(self, entry):
         field = entry["field"]
-        vocabulary = self._vocabulary(field)
-        titles = {value: self._value_title(vocabulary, value) for value in self.options[field]}
-        values = ordered_options(titles, entry["allow_list"], titles.__getitem__)
+        titles = self.narrowed.options[field]
+        values = ordered_options(titles, entry["allow_list"])
         return {
             "kind": "options",
             "field": field,
@@ -278,7 +275,7 @@ class FilteredListingBlockView(ListingBlockView):
             "disabled": "disabled" if not self.block_id else None,
             "action": f"{self._base_url}#{self.anchor}" if self.block_id else "#",
             "hidden": (
-                self._foreign_params + self._selection_params(self.selected)
+                self._foreign_params + self._selection_params(self.narrowed.selected)
                 if self.block_id
                 else []
             ),
@@ -290,13 +287,13 @@ class FilteredListingBlockView(ListingBlockView):
         for field, entry in self.filters.items():
             if field == TEXT_FIELD:
                 groups.append(self._search_group(entry))
-            elif self.options[field]:
+            elif self.narrowed.options[field]:
                 groups.append(self._options_group(entry))
         return groups
 
     @property
     def reset_url(self):
-        if not self.block_id or not (self.term or any(self.selected.values())):
+        if not self.block_id or not (self.term or any(self.narrowed.selected.values())):
             return None
         return self._href({})
 
@@ -306,21 +303,21 @@ class FilteredListingBlockView(ListingBlockView):
 
     @property
     def pager(self):
-        if len(self.results) <= self.page_size:
+        if len(self.narrowed.results) <= self.page_size:
             return None
         previous_start = self.start - self.page_size
         next_start = self.start + self.page_size
         return {
             "page": self.start // self.page_size + 1,
-            "pages": (len(self.results) - 1) // self.page_size + 1,
+            "pages": (len(self.narrowed.results) - 1) // self.page_size + 1,
             "previous": (
-                self._href(self.selected, self.term, max(previous_start, 0))
+                self._href(self.narrowed.selected, self.term, max(previous_start, 0))
                 if self.start > 0
                 else None
             ),
             "next": (
-                self._href(self.selected, self.term, next_start)
-                if next_start < len(self.results)
+                self._href(self.narrowed.selected, self.term, next_start)
+                if next_start < len(self.narrowed.results)
                 else None
             ),
         }

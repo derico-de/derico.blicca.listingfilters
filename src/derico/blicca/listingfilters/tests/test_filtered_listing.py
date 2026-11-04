@@ -14,7 +14,10 @@ from plone.blicca.auroraeditor.interfaces import IPloneBliccaAuroraeditorLayer
 from plone.memoize import ram
 from plone.restapi.behaviors import IBlocks
 from zope.component import getMultiAdapter
+from zope.component import getSiteManager
+from zope.component import getUtility
 from zope.interface import alsoProvides
+from zope.schema.interfaces import IVocabularyFactory
 
 from derico.blicca.listingfilters.interfaces import IDericoBliccaListingfiltersLayer
 from derico.blicca.listingfilters.views import filtered_listing_block_view
@@ -215,6 +218,20 @@ class TestOptions(ListingCase):
         block = self.render(listing({"field": "portal_type"}))
         assert "News Item" in self.options(block, "portal_type")
         assert "Page" in self.options(block, "portal_type")
+
+    def test_a_repeated_listing_does_not_build_the_vocabulary_again(self):
+        name = "plone.app.vocabularies.ReallyUserFriendlyTypes"
+        factory = mock.Mock(wraps=getUtility(IVocabularyFactory, name))
+        site_manager = getSiteManager(self.portal)
+        site_manager.registerUtility(factory, IVocabularyFactory, name=name)
+        try:
+            with mock.patch.object(filtered_listing_block_view, "time", return_value=0):
+                self.render(listing({"field": "portal_type"}))
+                block = self.render(listing({"field": "portal_type"}))
+        finally:
+            site_manager.unregisterUtility(factory, IVocabularyFactory, name=name)
+        assert "Page" in self.options(block, "portal_type")
+        assert factory.call_count == 1
 
     def test_the_staff_title_names_the_filter(self):
         block = self.render(listing({"field": "Subject", "title": "Themen"}))

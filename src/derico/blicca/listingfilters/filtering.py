@@ -2,12 +2,7 @@
 
 
 def narrow(entries, allow_lists, chosen, text_matches=None):
-    """Return ``(results, options, selected)`` for a listing's base results.
-
-    ``entries`` are ``(key, {field: values})`` pairs in the listing's order.
-    A filter ignores its own selection when listing its options, values of one
-    filter widen and different filters narrow.
-    """
+    """Return ``(results, options, selected)`` for ``(key, {field: values})`` entries."""
     entries = list(entries)
     occurring = {field: set() for field in allow_lists}
     for _key, values in entries:
@@ -19,6 +14,7 @@ def narrow(entries, allow_lists, chosen, text_matches=None):
     for field, allow_list in allow_lists.items():
         allowed = occurring[field] & set(allow_list) if allow_list else occurring[field]
         selected[field] = allowed & set(chosen.get(field, ()))
+        # Even when it finds nothing, so a visitor can deselect it.
         options[field] = set(selected[field])
 
     results = []
@@ -30,6 +26,8 @@ def narrow(entries, allow_lists, chosen, text_matches=None):
         ]
         if not misses:
             results.append(key)
+        # Values of one filter widen and different filters narrow, so a filter
+        # ignores its own selection when listing its options.
         for field, allow_list in allow_lists.items():
             if not misses or misses == [field]:
                 offered = values[field] & set(allow_list) if allow_list else values[field]
@@ -37,8 +35,8 @@ def narrow(entries, allow_lists, chosen, text_matches=None):
     return results, options, selected
 
 
-def ordered_options(values, allow_list, title):
+def ordered_options(titles, allow_list):
     """An allow list sets the order, otherwise alphabetical by title."""
     if allow_list:
-        return [value for value in allow_list if value in values]
-    return sorted(values, key=lambda value: title(value).casefold())
+        return [value for value in allow_list if value in titles]
+    return sorted(titles, key=lambda value: titles[value].casefold())

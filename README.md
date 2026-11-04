@@ -20,10 +20,10 @@ the options, and a listing with no filters renders exactly as it did.
 ## Features
 
 - **Options from the listing's own results.** A value that finds nothing is
-  not offered. Under each filter, the options reflect the other filters'
-  selections, and a filter ignores its own, so a visitor can widen the
-  selection again.
-- **Any catalog property with values**, such as the Tag, the type or the
+  not offered, unless it is selected, so a visitor can deselect it. Under each
+  filter, the options reflect the other filters' selections, and a filter
+  ignores its own, so a visitor can widen the selection again.
+- **Properties with values to choose from**, such as the Tag, the type or the
   state, and a **text search**.
 - **An allow list per filter.** Staff choose from all the site's values. The
   list limits the options and sets their order.
@@ -76,7 +76,9 @@ Select a Listing block in the editor and open **Filters** in the sidebar.
 
 A property is offered when it has a catalog index configured for
 `plone.app.querystring` with values to choose from, or a vocabulary. To be
-narrowed by, it also needs a catalog metadata column.
+narrowed by, it also needs a catalog metadata column. Without one the filter
+stays hidden from visitors, and `@querystring` doesn't tell the sidebar which
+properties have a column, so it still offers them.
 
 ## Rendered markup
 

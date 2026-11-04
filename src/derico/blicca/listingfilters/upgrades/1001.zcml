@@ -18,6 +18,7 @@
     <genericsetup:upgradeDepends
         title="Register the listing override"
         import_profile="derico.blicca.listingfilters.upgrades:1001"
+        import_steps="plone.app.registry"
         />
 
   </genericsetup:upgradeSteps>

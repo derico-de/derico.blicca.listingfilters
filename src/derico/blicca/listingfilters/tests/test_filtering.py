@@ -99,7 +99,7 @@ class TestSelections:
 class TestOrder:
     def test_alphabetical_by_title_ignoring_case_without_an_allow_list(self):
         titles = {"a": "Zebra", "b": "apple", "c": "Mango"}
-        assert ordered_options({"a", "b", "c"}, [], titles.__getitem__) == ["b", "c", "a"]
+        assert ordered_options(titles, []) == ["b", "c", "a"]
 
     def test_an_allow_list_sets_the_order(self):
-        assert ordered_options({"a", "b"}, ["b", "gone", "a"], str) == ["b", "a"]
+        assert ordered_options({"a": "A", "b": "B"}, ["b", "gone", "a"]) == ["b", "a"]
