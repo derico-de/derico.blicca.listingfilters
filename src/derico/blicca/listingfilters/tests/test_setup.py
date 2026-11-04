@@ -1,18 +1,18 @@
 """Test derico.blicca.listingfilters installation."""
 
 import pytest
+from plone import api
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from plone.base.interfaces import INonInstallable
+from plone.blicca.auroraeditor import blockaddons
 from plone.browserlayer.utils import registered_layers
 from plone.registry.interfaces import IRegistry
-from zope.component import getUtility
 from zope.component import getUtilitiesFor
+from zope.component import getUtility
 from zope.interface import alsoProvides
 
 from derico.blicca.listingfilters.interfaces import IDericoBliccaListingfiltersLayer
-from plone import api
-from plone.blicca.auroraeditor import blockaddons
 
 
 RECORD = "plone.blicca.auroraeditor.blockaddons/derico.blicca.listingfilters.listing"
@@ -74,4 +74,4 @@ class TestUninstall:
 
     def test_record_removed(self):
         registry = getUtility(IRegistry)
-        assert not [name for name in registry.records.keys() if name.startswith(RECORD)]
+        assert not [name for name in registry.records if name.startswith(RECORD)]

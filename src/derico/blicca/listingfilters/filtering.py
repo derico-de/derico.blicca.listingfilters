@@ -25,7 +25,9 @@ def narrow(entries, allow_lists, chosen, text_matches=None):
     for key, values in entries:
         if text_matches is not None and key not in text_matches:
             continue
-        misses = [field for field, picked in selected.items() if picked and not picked & values[field]]
+        misses = [
+            field for field, picked in selected.items() if picked and not picked & values[field]
+        ]
         if not misses:
             results.append(key)
         for field, allow_list in allow_lists.items():

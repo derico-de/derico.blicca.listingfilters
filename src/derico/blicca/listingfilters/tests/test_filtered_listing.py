@@ -4,11 +4,13 @@ from unittest import mock
 
 import lxml.html
 import pytest
+from plone import api
 from plone.app.testing import login
 from plone.app.testing import logout
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from plone.app.testing import TEST_USER_NAME
+from plone.blicca.auroraeditor.interfaces import IPloneBliccaAuroraeditorLayer
 from plone.memoize import ram
 from plone.restapi.behaviors import IBlocks
 from zope.component import getMultiAdapter
@@ -17,8 +19,6 @@ from zope.interface import alsoProvides
 from derico.blicca.listingfilters.interfaces import IDericoBliccaListingfiltersLayer
 from derico.blicca.listingfilters.views import filtered_listing_block_view
 from derico.blicca.listingfilters.views.filtered_listing_block_view import FilteredListingBlockView
-from plone import api
-from plone.blicca.auroraeditor.interfaces import IPloneBliccaAuroraeditorLayer
 
 
 BLOCK_ID = "block-1"

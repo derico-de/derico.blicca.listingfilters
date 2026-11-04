@@ -1,13 +1,19 @@
 """The core listing block, with filters a visitor narrows it by."""
 
+import json
 from functools import cached_property
 from time import time
 from urllib.parse import parse_qsl
 from urllib.parse import urlencode
-import json
 
+import Missing
 from AccessControl import getSecurityManager
+from plone import api
 from plone.base.utils import munge_search_term
+from plone.blicca.auroraeditor.rendering import listing_brains
+from plone.blicca.auroraeditor.rendering import ListingBlockView
+from plone.blicca.auroraeditor.rendering import result_cap
+from plone.blicca.auroraeditor.rendering import summarize_brains
 from plone.memoize import ram
 from plone.registry.interfaces import IRegistry
 from Products.CMFCore.utils import getToolByName
@@ -17,16 +23,10 @@ from zope.component import getUtility
 from zope.component import queryUtility
 from zope.i18n import translate
 from zope.schema.interfaces import IVocabularyFactory
-import Missing
 
 from derico.blicca.listingfilters.filtering import narrow
 from derico.blicca.listingfilters.filtering import ordered_options
 from derico.blicca.listingfilters.i18n import _
-from plone import api
-from plone.blicca.auroraeditor.rendering import listing_brains
-from plone.blicca.auroraeditor.rendering import ListingBlockView
-from plone.blicca.auroraeditor.rendering import result_cap
-from plone.blicca.auroraeditor.rendering import summarize_brains
 
 
 TEXT_FIELD = "SearchableText"

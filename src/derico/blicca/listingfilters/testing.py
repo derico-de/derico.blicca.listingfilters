@@ -1,7 +1,9 @@
 """Testing setup for derico.blicca.listingfilters."""
+
 import os
 
 import plone.app.theming
+import plone.blicca.auroraeditor
 import plone.restapi
 import plone.volto
 from plone.app.contenttypes.testing import PLONE_APP_CONTENTTYPES_FIXTURE
@@ -13,7 +15,6 @@ from plone.app.testing import SITE_OWNER_PASSWORD
 from plone.testing.zope import WSGI_SERVER_FIXTURE
 
 import derico.blicca.listingfilters
-import plone.blicca.auroraeditor
 
 
 class DericoBliccaListingfiltersLayer(PloneSandboxLayer):

@@ -1,4 +1,5 @@
 """Setup handlers for derico.blicca.listingfilters."""
+
 from plone.base.interfaces import INonInstallable
 from zope.interface import implementer
 

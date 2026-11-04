@@ -20,7 +20,7 @@ class TestUpgrade1001:
         self.registry = getUtility(IRegistry)
 
     def test_a_site_at_1000_gets_the_record(self):
-        for name in [name for name in self.registry.records.keys() if name.startswith(RECORD)]:
+        for name in [name for name in self.registry.records if name.startswith(RECORD)]:
             del self.registry.records[name]
         setup = self.portal.portal_setup
         setup.setLastVersionForProfile(PROFILE, "1000")
