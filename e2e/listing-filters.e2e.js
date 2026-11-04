@@ -1,0 +1,300 @@
+/* E2E: staff set up filters on a listing, visitors narrow it.
+ *
+ *  1. In the editor, the listing's Filters setting adds a Tag filter with an
+ *     allow list and a text search. The canvas previews them, and a click on
+ *     a preview option stays in the editor.
+ *  2. Saved, a visitor sees the allow list's options, in its order. An
+ *     allowed tag only found outside the listing's results is not offered.
+ *  3. An option narrows the results and the other filters' options, and
+ *     shows as selected.
+ *  4. The text search narrows the results, and reset brings them all back.
+ *  5. The pager walks the results.
+ *  6. The listing without filters on the same page is left alone.
+ *
+ * Prerequisites: a running Plone site with derico.blicca.listingfilters
+ * installed. Configure via environment:
+ *   AURORA_E2E_BASE       site to build the fixture in
+ *                         (default http://localhost:8099/Plone1; Plone leaves
+ *                         127.0.0.1 unthemed, so use a host name)
+ *   AURORA_E2E_USER       login    (default admin)
+ *   AURORA_E2E_PASSWORD   password (default admin)
+ *   AURORA_E2E_CHROMIUM   chromium executable (default: playwright-core's)
+ *   AURORA_E2E_PAGE_TYPE  fixture portal_type (default Document) — set to
+ *                         Article where only that type has blocks
+ *   AURORA_E2E_SHOTS      directory for screenshots (default: none)
+ *
+ * Run: pnpm e2e   (after `pnpm install` in this directory)
+ */
+const { chromium } = require('playwright-core');
+
+const BASE = process.env.AURORA_E2E_BASE || 'http://localhost:8099/Plone1';
+const USER = process.env.AURORA_E2E_USER || 'admin';
+const PASSWORD = process.env.AURORA_E2E_PASSWORD || 'admin';
+const EXECUTABLE = process.env.AURORA_E2E_CHROMIUM;
+const PAGE_TYPE = process.env.AURORA_E2E_PAGE_TYPE || 'Document';
+const SHOTS = process.env.AURORA_E2E_SHOTS;
+const AUTH = 'Basic ' + Buffer.from(`${USER}:${PASSWORD}`).toString('base64');
+
+const FOLDER_ID = 'listingfilters-e2e';
+const ELSEWHERE_ID = 'listingfilters-e2e-elsewhere';
+const PAGE_ID = 'page';
+const BLOCK_ID = 'filtered';
+const RED = 'e2e-red';
+const BLUE = 'e2e-blue';
+const GREEN = 'e2e-green';
+const ELSEWHERE_TAG = 'e2e-elsewhere';
+
+const ITEMS = [
+  { id: 'alpha', title: 'Alpha', subjects: [RED, BLUE], description: 'First' },
+  { id: 'beta', title: 'Beta', subjects: [RED], description: 'Second' },
+  { id: 'gamma', title: 'Gamma', subjects: [GREEN], description: 'Holds the needle' },
+];
+
+async function api(method, path, body) {
+  const response = await fetch(`${BASE}${path}`, {
+    method,
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: AUTH },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (response.status === 423 && method === 'DELETE') {
+    await api('DELETE', `${path}/@lock`, { force: true });
+    return api(method, path, body);
+  }
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`${method} ${path} -> ${response.status}`);
+  }
+  return response.status === 204 || response.status === 404 ? undefined : response.json();
+}
+
+async function cleanup() {
+  await api('DELETE', `/${FOLDER_ID}/${PAGE_ID}`);
+  await api('DELETE', `/${FOLDER_ID}`);
+  await api('DELETE', `/${ELSEWHERE_ID}`);
+}
+
+function fail(message) {
+  console.error(`FAIL: ${message}`);
+  process.exitCode = 1;
+}
+
+function expectEqual(actual, expected, what) {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    fail(`${what}: ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`);
+  } else {
+    console.log(`ok: ${what}`);
+  }
+}
+
+const listingBlock = (id, headline) => ({
+  type: 'ploneBlock',
+  '@type': 'listing',
+  id,
+  headline,
+  variation: 'summary',
+  querystring: {
+    b_size: 2,
+    sort_on: 'sortable_title',
+    query: [
+      { i: 'path', o: 'plone.app.querystring.operation.string.absolutePath', v: `/${FOLDER_ID}::1` },
+      { i: 'portal_type', o: 'plone.app.querystring.operation.selection.any', v: ['News Item'] },
+    ],
+  },
+  children: [{ text: '' }],
+});
+
+async function buildFixture() {
+  await cleanup();
+  await api('POST', '/', { '@type': 'Folder', id: FOLDER_ID, title: 'Listing filters e2e' });
+  await api('POST', `/${FOLDER_ID}/@workflow/publish`);
+  for (const { subjects, ...item } of ITEMS) {
+    await api('POST', `/${FOLDER_ID}`, { '@type': 'News Item', ...item, subjects });
+    await api('POST', `/${FOLDER_ID}/${item.id}/@workflow/publish`);
+  }
+  await api('POST', '/', { '@type': 'Folder', id: ELSEWHERE_ID, title: 'Elsewhere', subjects: [ELSEWHERE_TAG] });
+  await api('POST', `/${ELSEWHERE_ID}/@workflow/publish`);
+  await api('POST', `/${FOLDER_ID}`, {
+    '@type': PAGE_TYPE,
+    id: PAGE_ID,
+    title: 'Listing filters e2e page',
+    blocks: {
+      __somersault__: {
+        '@type': '__somersault__',
+        value: [
+          { type: 'title', children: [{ text: 'Listing filters e2e page' }] },
+          listingBlock(BLOCK_ID, 'Filtered'),
+          listingBlock('plain', 'Plain'),
+        ],
+      },
+    },
+    blocks_layout: { items: ['__somersault__'] },
+  });
+  await api('POST', `/${FOLDER_ID}/${PAGE_ID}/@workflow/publish`);
+}
+
+async function setUpFiltersInTheEditor(page) {
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
+  await page.fill('input[name="__ac_name"]', USER);
+  await page.fill('input[name="__ac_password"]', PASSWORD);
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+    page.press('input[name="__ac_password"]', 'Enter'),
+  ]);
+  await page.goto(`${BASE}/${FOLDER_ID}/${PAGE_ID}/@@aurora-edit`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('[data-slate-editor]', { timeout: 90000 });
+  const block = page.locator(`[data-slate-editor] [data-block-id="${BLOCK_ID}"]`);
+  await block.locator('.listing-items').waitFor({ timeout: 15000 });
+  await block.click();
+
+  const sidebar = page.locator('#sidebar');
+  await sidebar.getByRole('button', { name: 'Filters' }).click();
+  const widget = sidebar.getByRole('group', { name: 'Filter the results by' });
+  const add = widget.getByRole('button', { name: 'Add filter' });
+  await add.waitFor({ timeout: 15000 });
+  await page.waitForFunction(
+    () => [...document.querySelectorAll('.listing-filters-widget button')].some((b) => b.textContent === 'Add filter' && !b.disabled),
+    null,
+    { timeout: 15000 },
+  );
+
+  await add.click();
+  await widget.getByRole('combobox', { name: 'Filter 1 property' }).selectOption('Subject');
+  await widget.getByRole('textbox', { name: 'Filter 1 title' }).fill('Topic');
+  const allowed = widget.getByRole('combobox', { name: 'Add an allowed value to filter 1' });
+  await allowed.selectOption(GREEN);
+  await allowed.selectOption(RED);
+  await allowed.selectOption(ELSEWHERE_TAG);
+  await add.click();
+  await widget.getByRole('combobox', { name: 'Filter 2 property' }).selectOption('SearchableText');
+
+  const glyph = await widget.getByRole('button', { name: `Remove ${RED}` }).evaluate((node) => {
+    const style = getComputedStyle(node);
+    return style.color !== style.backgroundColor;
+  });
+  expectEqual(glyph, true, 'the sidebar buttons show their glyphs');
+
+  const options = block.locator('.listing-filter-options a');
+  await options.first().waitFor({ timeout: 15000 });
+  await page.waitForFunction(
+    (id) => document.querySelector(`[data-block-id="${id}"] .listing-filters-search`),
+    BLOCK_ID,
+    { timeout: 15000 },
+  );
+  expectEqual(await options.allTextContents(), [GREEN, RED], 'the canvas previews the filters');
+  expectEqual(
+    await block.locator('.listing-filters-search input[type=search]').isDisabled(),
+    true,
+    'the preview cannot be searched',
+  );
+  const editing = page.url();
+  await options.first().click();
+  await page.waitForTimeout(300);
+  expectEqual(page.url(), editing, 'a click on a preview option stays in the editor');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/editor.png`, fullPage: true });
+
+  await Promise.all([
+    page.waitForResponse((response) => response.request().method() === 'PATCH' && response.ok(), { timeout: 15000 }),
+    page.click('.aurora-save'),
+  ]);
+  const saved = await api('GET', `/${FOLDER_ID}/${PAGE_ID}`);
+  const stored = saved.blocks.__somersault__.value.find((node) => node.id === BLOCK_ID);
+  expectEqual(
+    stored.filters,
+    [
+      { allowList: [GREEN, RED, ELSEWHERE_TAG], field: 'Subject', title: 'Topic' },
+      { allowList: [], field: 'SearchableText', title: '' },
+    ],
+    'the setting is stored',
+  );
+}
+
+const underline = (link) => link.evaluate((node) => getComputedStyle(node).textDecorationLine);
+
+async function visit(page) {
+  const filtered = page.locator('.listing', { has: page.locator('.listing-filters') });
+  const plain = page.locator('.listing', { hasNot: page.locator('.listing-filters') });
+  const titles = (listing) => listing.locator('.listing-items :is(h2, h3, h4)').allTextContents();
+  const shownTitles = async (listing) => (await titles(listing)).map((title) => title.trim());
+  const options = filtered.locator('.listing-filter-options a');
+  const settled = () => page.waitForLoadState('load');
+  const url = `${BASE}/${FOLDER_ID}/${PAGE_ID}`;
+
+  await page.goto(url, { waitUntil: 'load' });
+  expectEqual(await page.locator('.listing-filters').count(), 1, 'only the listing with filters offers them');
+  expectEqual(await filtered.locator('.listing-filter-title').allTextContents(), ['Topic'], 'the title staff chose');
+  expectEqual(await options.allTextContents(), [GREEN, RED], 'the allow list limits and orders the options');
+  expectEqual(await shownTitles(filtered), ['Alpha', 'Beta'], 'the first page of the base results');
+
+  const look = await options.first().evaluate((node) => {
+    const list = getComputedStyle(node.closest('ul'));
+    return { display: list.display, listStyle: list.listStyleType };
+  });
+  expectEqual(look, { display: 'flex', listStyle: 'none' }, 'the stylesheet reaches the options');
+  expectEqual(await underline(filtered.locator('.listing-pager a[rel=next]')), 'underline', 'the pager reads as a link');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/public.png`, fullPage: true });
+
+  await filtered.locator('.listing-pager a[rel=next]').click();
+  await settled();
+  expectEqual(await shownTitles(filtered), ['Gamma'], 'the pager shows the next page');
+  expectEqual(await shownTitles(plain), ['Alpha', 'Beta'], 'the pager leaves the listing without filters alone');
+
+  await page.goto(url, { waitUntil: 'load' });
+  await options.filter({ hasText: RED }).click();
+  await settled();
+  expectEqual(new URL(page.url()).searchParams.getAll(`${BLOCK_ID}.Subject`), [RED], 'the option is in the URL');
+  expectEqual(await shownTitles(filtered), ['Alpha', 'Beta'], 'an option narrows the results');
+  expectEqual(await options.allTextContents(), [GREEN, RED], 'a filter keeps its other options');
+  const selected = filtered.locator('.listing-filter-options a[aria-current]');
+  expectEqual(await selected.allTextContents(), [RED], 'the option shows as selected');
+  expectEqual(await underline(filtered.locator('.listing-filters-reset')), 'underline', 'reset reads as a link');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/selected.png`, fullPage: true });
+
+  const search = filtered.locator('.listing-filters-search input[type=search]');
+  // One read: the page is still scrolling to the listing's anchor.
+  const offset = await filtered.locator('.listing-filters-search fieldset').evaluate((fieldset) => {
+    const bottom = (selector) => fieldset.querySelector(selector).getBoundingClientRect().bottom;
+    return Math.round(bottom('input[type=search]') - bottom('button'));
+  });
+  expectEqual(offset, 0, 'the search box and its button line up');
+  await search.fill('needle');
+  await search.press('Enter');
+  await settled();
+  expectEqual(await filtered.locator('.listing-empty').count(), 1, 'the search narrows within the selection');
+
+  await filtered.locator('.listing-filters-reset').click();
+  await settled();
+  expectEqual(await shownTitles(filtered), ['Alpha', 'Beta'], 'reset brings the results back');
+  expectEqual(await filtered.locator('.listing-filters-reset').count(), 0, 'with nothing chosen there is no reset');
+
+  await search.fill('needle');
+  await search.press('Enter');
+  await settled();
+  expectEqual(await shownTitles(filtered), ['Gamma'], 'the text search narrows the results');
+  expectEqual(await options.allTextContents(), [GREEN], 'the options follow the text search');
+  expectEqual(await shownTitles(plain), ['Alpha', 'Beta'], 'the search leaves the listing without filters alone');
+}
+
+(async () => {
+  await buildFixture();
+  const browser = await chromium.launch(EXECUTABLE ? { executablePath: EXECUTABLE } : {});
+  const pageErrors = [];
+  const newPage = async (context) => {
+    const page = await context.newPage();
+    page.on('pageerror', (error) => pageErrors.push(error.stack || String(error)));
+    page.on('dialog', (dialog) => dialog.accept());
+    return page;
+  };
+
+  try {
+    const viewport = { width: 1400, height: 1000 };
+    await setUpFiltersInTheEditor(await newPage(await browser.newContext({ viewport })));
+    await visit(await newPage(await browser.newContext({ viewport })));
+    if (pageErrors.length) fail(`uncaught page errors:\n${pageErrors.join('\n')}`);
+    if (process.exitCode !== 1) console.log('PASS');
+  } finally {
+    await browser.close();
+    await cleanup();
+  }
+})().catch((error) => {
+  console.error('E2E crashed:', error);
+  process.exit(1);
+});

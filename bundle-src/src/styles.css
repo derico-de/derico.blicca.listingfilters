@@ -67,6 +67,7 @@
 
 .listing-filters .listing-filters-search input[type='search'] {
   box-sizing: border-box;
+  margin: 0;
   width: 100%;
   padding: 0.375rem 0.75rem;
   border: 1px solid currentColor;
@@ -91,6 +92,13 @@
 
 .listing-filters .listing-filters-reset {
   align-self: flex-start;
+}
+
+/* The core block takes the underline off `.listing a`: these two are the
+   listing's only links without a border or a heading to read as links. */
+.listing .listing-filters .listing-filters-reset,
+.listing .listing-pager a[rel] {
+  text-decoration: underline;
 }
 
 .listing-pager {

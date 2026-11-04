@@ -19,7 +19,9 @@ const QUERYSTRING = {
       enabled: true,
       values: { Document: { title: 'Page' }, 'News Item': { title: 'News item' } },
     },
+    Creator: { title: 'Creator', enabled: true, values: {}, vocabulary: 'plone.app.vocabularies.Users' },
     review_state: { title: 'State', enabled: false, values: { published: { title: 'Published' } } },
+    show_inactive: { title: 'Show Inactive', enabled: true, values: { Manager: { title: 'Manager' } } },
   },
 };
 
@@ -77,7 +79,7 @@ describe('the properties a filter can use', () => {
     );
   });
 
-  it('offers enabled properties with values, and the text search', async () => {
+  it('offers enabled properties with values or a vocabulary, and the text search', async () => {
     const { add } = await renderWidget();
 
     fireEvent.click(add);
@@ -85,6 +87,7 @@ describe('the properties a filter can use', () => {
     expect(optionLabels(screen.getByRole('combobox', { name: 'Filter 1 property' }))).toEqual([
       'Tag',
       'Type',
+      'Creator',
       'Text search',
     ]);
   });
@@ -131,6 +134,7 @@ describe('the filter rows', () => {
     const { add } = await renderWidget([
       { field: 'Subject', title: '', allowList: [] },
       { field: 'portal_type', title: '', allowList: [] },
+      { field: 'Creator', title: '', allowList: [] },
       { field: 'SearchableText', title: '', allowList: [] },
     ]);
 
@@ -145,6 +149,7 @@ describe('the filter rows', () => {
 
     expect(optionLabels(screen.getByRole('combobox', { name: 'Filter 2 property' }))).toEqual([
       'Type',
+      'Creator',
       'Text search',
     ]);
   });

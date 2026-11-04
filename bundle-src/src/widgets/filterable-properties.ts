@@ -11,15 +11,24 @@ export type FilterableProperty = {
 
 const TEXT_SEARCH_PROPERTY: FilterableProperty = { field: TEXT_SEARCH, title: 'Text search', values: [] };
 
+// A criterion of the query, not a property of the content.
+const NOT_A_PROPERTY = ['show_inactive'];
+
 type QuerystringIndex = {
   title?: string;
   enabled?: boolean;
+  vocabulary?: string | null;
   values?: Record<string, { title?: string }>;
 };
 
+function isFilterable(field: string, index: QuerystringIndex) {
+  if (index.enabled === false || NOT_A_PROPERTY.includes(field)) return false;
+  return Boolean(index.vocabulary) || Object.keys(index.values ?? {}).length > 0;
+}
+
 function fromIndexes(indexes: Record<string, QuerystringIndex>): FilterableProperty[] {
   return Object.entries(indexes)
-    .filter(([, index]) => index.enabled !== false && Object.keys(index.values ?? {}).length > 0)
+    .filter(([field, index]) => isFilterable(field, index))
     .map(([field, index]) => ({
       field,
       title: index.title || field,

@@ -23,8 +23,8 @@ export type ListingFiltersWidgetProps = {
 };
 
 const labelClass = 'w-fit cursor-default text-xs font-medium text-quanta-pigeon';
-const controlClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
-const buttonClass = 'rounded-md border border-input bg-background px-2 py-1 text-xs';
+const controlClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground';
+const buttonClass = 'rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground';
 const noteClass = 'text-xs font-normal text-quanta-pigeon';
 
 function storedFilters(value: unknown): Filter[] {

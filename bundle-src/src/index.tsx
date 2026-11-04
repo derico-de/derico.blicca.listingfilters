@@ -17,7 +17,7 @@ export function withFilters(upstream: unknown) {
       fieldsets: [...(schema.fieldsets ?? []), { id: 'filters', title: 'Filters', fields: ['filters'] }],
       properties: {
         ...schema.properties,
-        filters: { title: 'Filters', widget: 'listingfilters_filters' },
+        filters: { title: 'Filter the results by', widget: 'listingfilters_filters' },
       },
     };
   };

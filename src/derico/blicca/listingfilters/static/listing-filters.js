@@ -3,8 +3,13 @@ import { useState, useEffect, useId } from "react";
 import config from "@plone/registry";
 const TEXT_SEARCH = "SearchableText";
 const TEXT_SEARCH_PROPERTY = { field: TEXT_SEARCH, title: "Text search", values: [] };
+const NOT_A_PROPERTY = ["show_inactive"];
+function isFilterable(field, index) {
+  if (index.enabled === false || NOT_A_PROPERTY.includes(field)) return false;
+  return Boolean(index.vocabulary) || Object.keys(index.values ?? {}).length > 0;
+}
 function fromIndexes(indexes) {
-  return Object.entries(indexes).filter(([, index]) => index.enabled !== false && Object.keys(index.values ?? {}).length > 0).map(([field, index]) => ({
+  return Object.entries(indexes).filter(([field, index]) => isFilterable(field, index)).map(([field, index]) => ({
     field,
     title: index.title || field,
     values: Object.entries(index.values ?? {}).map(([value, term]) => [
@@ -49,8 +54,8 @@ function useFilterableProperties() {
   };
 }
 const labelClass = "w-fit cursor-default text-xs font-medium text-quanta-pigeon";
-const controlClass = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
-const buttonClass = "rounded-md border border-input bg-background px-2 py-1 text-xs";
+const controlClass = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground";
+const buttonClass = "rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground";
 const noteClass = "text-xs font-normal text-quanta-pigeon";
 function storedFilters(value) {
   if (!Array.isArray(value)) return [];
@@ -193,7 +198,7 @@ function withFilters(upstream) {
       fieldsets: [...schema.fieldsets ?? [], { id: "filters", title: "Filters", fields: ["filters"] }],
       properties: {
         ...schema.properties,
-        filters: { title: "Filters", widget: "listingfilters_filters" }
+        filters: { title: "Filter the results by", widget: "listingfilters_filters" }
       }
     };
   };
