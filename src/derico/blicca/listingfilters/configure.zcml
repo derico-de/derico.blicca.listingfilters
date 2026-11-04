@@ -25,11 +25,24 @@
       directory="profiles/uninstall"
       />
 
+  <!-- `++plone++`, never `++resource++`: two URLs for one JS module are two
+       module instances, hence two Reacts (block add-on contract §3.1). -->
+  <plone:static
+      name="derico.blicca.listingfilters"
+      type="plone"
+      directory="static"
+      />
+
   <genericsetup:importStep
       name="derico.blicca.listingfilters-uninstall"
       title="Derico Blicca Listingfilters uninstall"
       description="Uninstall derico.blicca.listingfilters"
       handler="derico.blicca.listingfilters.setuphandlers.uninstall"
+      />
+
+  <utility
+      factory=".setuphandlers.HiddenProfiles"
+      name="derico.blicca.listingfilters-hiddenprofiles"
       />
 
 

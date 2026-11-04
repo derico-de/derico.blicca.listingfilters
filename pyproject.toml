@@ -1,6 +1,6 @@
 [project]
 name = "derico.blicca.listingfilters"
-version = "1.0.0a1"
+version = "1.0.0a1.dev0"
 description = "Listing filters for Plone Blicca: visitors narrow a listing by tags, other properties or a text search, with options from that listing's own results"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,6 +26,9 @@ keywords = ["Plone", "CMS"]
 dependencies = [
     "Plone>=6.2",
     "setuptools<81",
+    # The override builds on plone.blicca.auroraeditor.rendering's listing seams
+    # (block add-on contract §5.7), and `overrides` on the record needs ADR 0025.
+    "plone.blicca.auroraeditor>=1.0.0a6",
 ]
 
 [project.optional-dependencies]
@@ -38,10 +41,10 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/derico.blicca/derico.blicca.listingfilters"
-Documentation = "https://github.com/derico.blicca/derico.blicca.listingfilters"
-Repository = "https://github.com/derico.blicca/derico.blicca.listingfilters.git"
-Issues = "https://github.com/derico.blicca/derico.blicca.listingfilters/issues"
+Homepage = "https://github.com/derico-de/derico.blicca.listingfilters"
+Documentation = "https://github.com/derico-de/derico.blicca.listingfilters"
+Repository = "https://github.com/derico-de/derico.blicca.listingfilters.git"
+Issues = "https://github.com/derico-de/derico.blicca.listingfilters/issues"
 
 [project.entry-points."z3c.autoinclude.plugin"]
 target = "plone"
@@ -68,6 +71,15 @@ content_types = []
 behaviors = []
 services = []
 views = ["aurora-block-listing"]
+
+[tool.uv]
+# Resolve against the Plone the site actually runs.
+constraint-dependencies = ["Products.CMFPlone==6.2.1"]
+
+[tool.uv.sources]
+# plone.blicca.auroraeditor is not on PyPI: the sibling checkout, locally and
+# in CI.
+"plone.blicca.auroraeditor" = { path = "../plone.blicca.auroraeditor", editable = true }
 
 [tool.pytest.ini_options]
 testpaths = ["src/derico/blicca/listingfilters/tests"]

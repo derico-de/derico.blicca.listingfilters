@@ -1,0 +1,54 @@
+<div xmlns:tal="http://xml.zope.org/namespaces/tal"
+     xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+     i18n:domain="derico.blicca.listingfilters"
+     class="listing-filters"
+     role="group"
+     aria-label="Filter results"
+     i18n:attributes="aria-label"
+     tal:attributes="id view/anchor">
+
+  <tal:group tal:repeat="group view/groups">
+    <form class="listing-filters-search"
+          role="search"
+          method="get"
+          tal:condition="python: group['kind'] == 'search'"
+          tal:attributes="action group/action">
+      <fieldset tal:attributes="disabled group/disabled">
+        <label>
+          <span class="listing-filter-label"
+                tal:content="group/title">Search</span>
+          <input type="search"
+                 tal:attributes="name group/name;
+                                 value group/value" />
+        </label>
+        <input type="hidden"
+               tal:repeat="param group/hidden"
+               tal:attributes="name python: param[0];
+                               value python: param[1]" />
+        <button type="submit"
+                i18n:translate="">Search</button>
+      </fieldset>
+    </form>
+
+    <div class="listing-filter"
+         tal:condition="python: group['kind'] == 'options'">
+      <p class="listing-filter-title"
+         tal:content="group/title">Tag</p>
+      <ul class="listing-filter-options"
+          tal:attributes="data-listing-filter group/field;
+                          aria-label group/title">
+        <li tal:repeat="option group/options">
+          <a tal:attributes="href option/href;
+                             aria-current python: 'true' if option['selected'] else None"
+             tal:content="option/title">Value</a>
+        </li>
+      </ul>
+    </div>
+  </tal:group>
+
+  <a class="listing-filters-reset"
+     tal:define="reset_url view/reset_url"
+     tal:condition="reset_url"
+     tal:attributes="href reset_url"
+     i18n:translate="">Reset filters</a>
+</div>

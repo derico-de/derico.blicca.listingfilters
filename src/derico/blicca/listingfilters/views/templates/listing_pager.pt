@@ -1,0 +1,17 @@
+<nav xmlns:tal="http://xml.zope.org/namespaces/tal"
+     xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+     i18n:domain="derico.blicca.listingfilters"
+     class="listing-pager"
+     aria-label="Result pages"
+     i18n:attributes="aria-label"
+     tal:define="pager view/pager">
+  <a rel="prev"
+     tal:condition="pager/previous"
+     tal:attributes="href pager/previous"
+     i18n:translate="">Previous</a>
+  <span i18n:translate="">Page <tal:page i18n:name="page" tal:replace="pager/page" /> of <tal:pages i18n:name="pages" tal:replace="pager/pages" /></span>
+  <a rel="next"
+     tal:condition="pager/next"
+     tal:attributes="href pager/next"
+     i18n:translate="">Next</a>
+</nav>
