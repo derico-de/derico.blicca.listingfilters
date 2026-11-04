@@ -1,0 +1,45 @@
+{
+  "name": "@derico/aurora-listingfilters-block",
+  "version": "1.0.0-alpha.1",
+  "description": "Filters for the Plone listing block in Aurora: visitors narrow a listing by tags, other properties or a text search",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "aurora",
+    "plone",
+    "block",
+    "listing",
+    "filters"
+  ],
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.*"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@plone/helpers": "^2.0.0-alpha.8",
+    "@plone/registry": "^4.0.0-alpha.3",
+    "react": "^18 || ^19"
+  },
+  "devDependencies": {
+    "@plone/helpers": "2.0.0-alpha.8",
+    "@plone/registry": "4.0.0-alpha.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.0.0",
+    "jsdom": "^26.0.0",
+    "postcss": "^8.5.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^7.0.0",
+    "vitest": "^3.0.0"
+  }
+}
