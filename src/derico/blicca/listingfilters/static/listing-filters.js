@@ -330,7 +330,8 @@ function install(config2) {
       ...listing,
       blockSchema: withFilters(listing.blockSchema),
       // A flag, as the host wraps the component once an install has run.
-      edit: listing.filtersPreview ? listing.edit : withFiltersPreview(listing.edit),
+      // Aurora's own listing has no edit component, its editor shows the view.
+      edit: listing.edit && !listing.filtersPreview ? withFiltersPreview(listing.edit) : listing.edit,
       filtersPreview: true
     };
   }

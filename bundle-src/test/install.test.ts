@@ -53,6 +53,16 @@ describe('install', () => {
     expect(config.blocks.blocksConfig.listing.edit).toBe(first);
   });
 
+  it('leaves a host whose listing has no edit component on its view', () => {
+    const config = hostConfig();
+    delete config.blocks.blocksConfig.listing.edit;
+
+    const { listing } = install(config).blocks.blocksConfig;
+
+    expect(listing.edit).toBeUndefined();
+    expect(listing.view).toBe(CoreView);
+  });
+
   it('passes the arguments on to the core schema', () => {
     const blockSchema = vi.fn(coreSchema);
     const args = { formData: { headline: 'News' } };

@@ -188,6 +188,18 @@ value wins:
 While a request runs, `.listing-results` is dimmed. On a public page it has the
 class `injecting`, on the canvas an ancestor has `aria-busy="true"`.
 
+## Using the block in Aurora
+
+The editor half lives in `bundle-src/` as the npm package
+`@derico/aurora-listingfilters-block` (not yet published). In Aurora today it
+only adds the **Filters** setting to the Listing block:
+
+- **Nothing narrows yet.** Aurora renders its own Listing view, which shows no
+  filters, and the narrowing lives in this package's Blicca view.
+- **The stylesheet does not apply.** It is scoped to the Blicca roots.
+- This has been checked against a registry without an `edit` component, not
+  inside a running Aurora application.
+
 ## Development
 
 ```bash
