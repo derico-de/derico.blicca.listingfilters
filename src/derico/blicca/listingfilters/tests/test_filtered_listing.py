@@ -375,6 +375,52 @@ class TestPager(ListingCase):
         assert self.titles(block) == ["Secret page"]
 
 
+class TestBatchSize(ListingCase):
+    def paged(self, *filters, size, **querystring):
+        return self.render({**listing(*filters, **querystring), "batchSize": size})
+
+    def pages(self, block):
+        (pager,) = block.xpath('.//nav[contains(@class, "listing-pager")]/span')
+        return pager.text_content()
+
+    @pytest.mark.parametrize("size", [2, "2"])
+    def test_it_sets_how_many_results_a_page_shows(self, size):
+        block = self.paged(SUBJECT_FILTER, size=size)
+        assert self.titles(block) == ["Cooking page", "Plone news"]
+        assert self.pages(block) == "Page 1 of 2"
+
+    def test_it_wins_over_the_batch_size_of_the_query(self):
+        block = self.paged(SUBJECT_FILTER, size=3, b_size=1)
+        assert self.titles(block) == ["Cooking page", "Plone news", "Plone talk"]
+
+    @pytest.mark.parametrize("size", [None, "", 0])
+    def test_without_one_the_query_decides(self, size):
+        block = self.paged(SUBJECT_FILTER, size=size, b_size=1)
+        assert self.titles(block) == ["Cooking page"]
+
+    @pytest.mark.parametrize("size", ["junk", -1, {"x": 1}])
+    def test_a_crafted_one_shows_the_default_page(self, size):
+        block = self.paged(SUBJECT_FILTER, size=size)
+        assert len(self.titles(block)) == 4
+
+    def test_filters_and_the_search_cover_every_page(self):
+        self.pick(Subject="python")
+        block = self.paged(SUBJECT_FILTER, size=1)
+        assert self.titles(block) == ["Plone news"]
+        assert self.options(block, "Subject") == ["cooking", "plone", "python", "secret"]
+        del self.request.form[f"{BLOCK_ID}.Subject"]
+        self.pick(SearchableText="talk")
+        assert self.titles(self.paged(TEXT_FILTER, size=1)) == ["Plone talk"]
+
+    def test_the_maximum_still_limits_the_whole_listing(self):
+        block = self.paged(SUBJECT_FILTER, size=2, limit=3)
+        assert self.titles(block) == ["Cooking page", "Plone news"]
+        assert self.pages(block) == "Page 1 of 2"
+
+    def test_a_listing_without_filters_ignores_it(self):
+        assert len(self.titles(self.paged(size=1))) == 4
+
+
 class TestCache(ListingCase):
     def test_one_query_serves_repeated_renders(self):
         counted = mock.Mock(wraps=filtered_listing_block_view.listing_brains)

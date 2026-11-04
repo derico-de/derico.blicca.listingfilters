@@ -15,10 +15,17 @@ export function withFilters(upstream: unknown) {
     if (schema.properties?.filters) return schema;
     return {
       ...schema,
-      fieldsets: [...(schema.fieldsets ?? []), { id: 'filters', title: 'Filters', fields: ['filters'] }],
+      fieldsets: [...(schema.fieldsets ?? []), { id: 'filters', title: 'Filters', fields: ['filters', 'batchSize'] }],
       properties: {
         ...schema.properties,
         filters: { title: 'Filter the results by', widget: 'listingfilters_filters' },
+        batchSize: {
+          title: 'Results per page',
+          description: 'Filters and the search cover every page. Maximum results still limits the whole listing.',
+          placeholder: '25',
+          type: 'number',
+          minimum: 1,
+        },
       },
     };
   };

@@ -34,8 +34,8 @@ the options, and a listing with no filters renders exactly as it did.
   The selection is in the URL, per block, so several listings on one page
   stay independent and a narrowed listing can be bookmarked. Without
   JavaScript the same links load the page.
-- **A pager over the narrowed results**, within the listing's own batch size
-  and limit.
+- **A pager over the narrowed results**, with a results-per-page setting for
+  the block. Filters and the search cover every page.
 - **Translated** into German.
 
 ## Requirements
@@ -75,6 +75,11 @@ Select a Listing block in the editor and open **Filters** in the sidebar.
   in the results is offered.
 - The arrows reorder the filters and the allowed values, the cross removes
   them.
+- **Results per page** sets the pager's page size, for example 6 for a grid of
+  3 × 2. Left empty, the listing's own `b_size` applies, otherwise 25. It is
+  stored as `batchSize` in the block's data. **Maximum results** still caps the
+  whole listing, so a filter or search finds nothing beyond it. A listing with
+  no filters ignores this setting.
 - The canvas narrows like a public page: options, the search from the third
   letter, the pager and reset all work, and stay in the editor. What you
   narrow it by is not saved.
@@ -219,8 +224,8 @@ pnpm build
 ```
 
 `e2e/` drives the add-on in a running site with playwright-core: in the
-editor, adding a Tag filter with an allow list and a text search, narrowing the
-canvas, and saving; on the page, as a visitor, the options, the pager, a
+editor, adding a Tag filter with an allow list and a text search, setting the
+results per page, narrowing the canvas, and saving; on the page, as a visitor, the options, the pager, a
 selected option, the live search and reset without a page load, next to a
 listing without filters and a second filtered one. It builds its fixture in
 the site `AURORA_E2E_BASE` names and removes it again; the add-on must be
