@@ -683,7 +683,6 @@ source = { editable = "." }
 dependencies = [
     { name = "plone" },
     { name = "plone-blicca-auroraeditor" },
-    { name = "setuptools" },
 ]
 
 [package.optional-dependencies]
@@ -704,7 +703,6 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pytest-cov", marker = "extra == 'test'" },
     { name = "pytest-plone", marker = "extra == 'test'", specifier = ">=0.5.0" },
-    { name = "setuptools", specifier = "<81" },
 ]
 provides-extras = ["test"]
 

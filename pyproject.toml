@@ -24,7 +24,6 @@ keywords = ["Plone", "CMS"]
 
 dependencies = [
     "Plone>=6.2",
-    "setuptools<81",
     # The override builds on plone.blicca.auroraeditor.rendering's listing seams
     # (block add-on contract §5.7), and `overrides` on the record needs ADR 0025.
     "plone.blicca.auroraeditor>=1.0.0a6",
