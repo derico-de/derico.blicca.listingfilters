@@ -1,5 +1,6 @@
 """A listing a visitor narrows, rendered by the ``aurora-block-listing`` override."""
 
+import re
 from unittest import mock
 
 import lxml.html
@@ -266,7 +267,7 @@ class TestTextSearch(ListingCase):
         block = self.render(listing(TEXT_FILTER))
         (field,) = block.xpath('.//input[@type="search"]')
         assert field.get("value") == '"><script>alert(1)</script>'
-        assert not block.xpath(".//script")
+        assert not block.xpath(".//script[not(@src)]")
 
     @pytest.mark.parametrize("term", ['"', "(x", "AND", "*"])
     def test_a_term_the_index_cannot_parse_breaks_nothing(self, term):
@@ -320,10 +321,10 @@ class TestLinks(ListingCase):
 
     def test_reset_is_offered_only_with_a_selection(self):
         block = self.render(listing(SUBJECT_FILTER))
-        assert not block.xpath('.//a[@class="listing-filters-reset"]')
+        assert not block.xpath('.//a[contains(@class, "listing-filters-reset")]')
         self.pick(Subject="python")
         block = self.render(listing(SUBJECT_FILTER))
-        (reset,) = block.xpath('.//a[@class="listing-filters-reset"]')
+        (reset,) = block.xpath('.//a[contains(@class, "listing-filters-reset")]')
         assert reset.get("href") == "http://nohost/plone/page#listing-block-1"
 
     def test_the_block_is_the_link_target(self):
@@ -393,21 +394,156 @@ class TestCache(ListingCase):
         assert self.options(block, "Subject") == ["plone"]
 
 
+class TestInjection(ListingCase):
+    def regions(self, element):
+        config = element.get("data-pat-inject")
+        return [swap.split(";")[0].strip() for swap in config.split("&&")]
+
+    def test_every_way_of_narrowing_injects(self):
+        self.pick(Subject="plone")
+        block = self.render(listing(TEXT_FILTER, SUBJECT_FILTER, b_size=1))
+        triggers = [
+            *block.xpath('.//form[@role="search"]'),
+            *block.xpath('.//ul[@data-listing-filter="Subject"]//a'),
+            *block.xpath('.//a[contains(@class, "listing-filters-reset")]'),
+            *block.xpath('.//nav[contains(@class, "listing-pager")]//a'),
+        ]
+        assert len(triggers) >= 4
+        for trigger in triggers:
+            assert "pat-inject" in trigger.get("class").split()
+            assert trigger.get("data-pat-inject").count("history: record") == 1
+
+    def test_the_cache_buster_of_an_injection_stays_out_of_the_links(self):
+        self.request.set("QUERY_STRING", "other.Subject=news&_=1793813503151")
+        block = self.render(listing(TEXT_FILTER, SUBJECT_FILTER))
+        (state,) = block.xpath('.//*[@id="listing-block-1-state"]')
+        assert [input_.get("name") for input_ in state.xpath(".//input")] == ["other.Subject"]
+        href = self.href(block, "Subject", "python")
+        assert "other.Subject=news" in href
+        assert "_=" not in href
+
+    def test_every_region_is_rendered_to_swap(self):
+        block = self.render(listing(TEXT_FILTER, SUBJECT_FILTER))
+        (form,) = block.xpath('.//form[@role="search"]')
+        for region in self.regions(form):
+            (selector,) = re.fullmatch(r"source: #(\S+)::element", region).groups()
+            assert len(block.xpath(f'.//*[@id="{selector}"]')) == 1
+
+    def test_the_field_being_typed_in_is_outside_every_region(self):
+        block = self.render(listing(TEXT_FILTER, SUBJECT_FILTER))
+        (form,) = block.xpath('.//form[@role="search"]')
+        (field,) = block.xpath('.//input[@type="search"]')
+        ids = {ancestor.get("id") for ancestor in field.iterancestors()}
+        assert not ids & {
+            re.fullmatch(r"source: #(\S+)::element", region).group(1)
+            for region in self.regions(form)
+        }
+
+    def test_the_selection_in_the_form_is_swapped_with_the_results(self):
+        self.pick(Subject="plone")
+        block = self.render(listing(TEXT_FILTER, SUBJECT_FILTER))
+        (state,) = block.xpath('.//*[@id="listing-block-1-state"]')
+        assert state.xpath('.//input[@name="block-1.Subject"]')[0].get("value") == "plone"
+
+    def test_a_filter_with_nothing_to_offer_keeps_its_place_hidden(self):
+        self.pick(SearchableText="nothing-matches-this")
+        block = self.render(listing(TEXT_FILTER, SUBJECT_FILTER))
+        (group,) = block.xpath('.//*[@id="listing-block-1-filter-Subject"]')
+        assert group.get("hidden") is not None
+
+    def test_nothing_to_reset_keeps_its_place_hidden(self):
+        block = self.render(listing(SUBJECT_FILTER))
+        (reset,) = block.xpath('.//*[@id="listing-block-1-reset"]')
+        assert reset.get("hidden") is not None
+
+    def test_the_pager_is_inside_the_results_region(self):
+        block = self.render(listing(SUBJECT_FILTER, b_size=1))
+        (results,) = block.xpath('.//*[@id="listing-block-1-results"]')
+        assert results.xpath('.//div[@class="listing-items"]')
+        assert results.xpath('.//nav[contains(@class, "listing-pager")]')
+
+    def test_a_listing_with_nothing_found_still_has_the_region(self):
+        self.pick(SearchableText="nothing-matches-this")
+        block = self.render(listing(TEXT_FILTER))
+        (results,) = block.xpath('.//*[@id="listing-block-1-results"]')
+        assert results.xpath('.//p[@class="listing-empty"]')
+
+    def test_the_pager_scrolls_back_to_the_results_and_the_options_do_not(self):
+        block = self.render(listing(SUBJECT_FILTER, b_size=1))
+        (link,) = block.xpath('.//nav[contains(@class, "listing-pager")]//a')
+        assert "scroll: #listing-block-1-results" in link.get("data-pat-inject")
+        assert "scroll" not in block.xpath(".//ul//a")[0].get("data-pat-inject")
+
+    def test_the_live_search_script_is_linked(self):
+        block = self.render(listing(TEXT_FILTER))
+        (script,) = block.xpath(".//script")
+        assert script.get("type") == "module"
+        assert script.get("src").endswith(
+            "/++plone++derico.blicca.listingfilters/listing-filters-live.js"
+        )
+
+
 class TestEditorPreview(ListingCase):
+    def preview(self, *filters, state=None, **querystring):
+        data = listing(*filters, **querystring)
+        if state is not None:
+            data["filtersPreview"] = state
+        return self.render(data, block_id="")
+
     def test_nothing_a_visitor_sent_is_read(self):
         self.request.form["Subject"] = "python"
         self.request.form[".Subject"] = "python"
-        block = self.render(listing(SUBJECT_FILTER), block_id="")
+        block = self.preview(SUBJECT_FILTER)
         assert "Cooking page" in self.titles(block)
         assert self.selected(block, "Subject") == []
 
     def test_options_lead_nowhere(self):
-        block = self.render(listing(SUBJECT_FILTER), block_id="")
+        block = self.preview(SUBJECT_FILTER)
         assert self.href(block, "Subject", "python") == "#"
 
-    def test_the_search_is_disabled(self):
-        block = self.render(listing(TEXT_FILTER), block_id="")
-        assert block.xpath('.//fieldset[@disabled]//input[@type="search"]')
+    def test_the_search_can_be_typed_in(self):
+        block = self.preview(TEXT_FILTER)
+        assert not block.xpath(".//fieldset[@disabled]")
+
+    def test_nothing_injects_or_loads_a_script(self):
+        block = self.preview(TEXT_FILTER, SUBJECT_FILTER, state={"Subject": ["plone"]}, b_size=1)
+        assert not block.xpath('.//*[contains(@class, "pat-inject")]')
+        assert not block.xpath(".//*[@data-pat-inject]")
+        assert not block.xpath(".//script")
+
+    def test_the_preview_state_narrows(self):
+        block = self.preview(SUBJECT_FILTER, state={"Subject": ["python"]})
+        assert self.titles(block) == ["Plone news"]
+        assert self.selected(block, "Subject") == ["python"]
+
+    def test_the_preview_state_searches(self):
+        block = self.preview(TEXT_FILTER, state={"SearchableText": "Kartoffelsuppe"})
+        assert self.titles(block) == ["Cooking page"]
+
+    def test_the_preview_state_turns_the_page(self):
+        block = self.preview(SUBJECT_FILTER, state={"b_start": 2}, b_size=2)
+        assert self.titles(block) == ["Plone talk", "Secret page"]
+        (link,) = block.xpath('.//nav[contains(@class, "listing-pager")]//a')
+        assert link.get("data-listing-start") == "0"
+
+    def test_a_selected_preview_offers_reset(self):
+        block = self.preview(SUBJECT_FILTER, state={"Subject": ["python"]})
+        assert block.xpath('.//a[contains(@class, "listing-filters-reset")]')
+
+    def test_options_name_their_value(self):
+        block = self.preview(SUBJECT_FILTER)
+        values = block.xpath('.//ul[@data-listing-filter="Subject"]//a/@data-listing-value')
+        assert "python" in values
+
+    def test_a_stored_page_ignores_the_preview_state(self):
+        data = listing(SUBJECT_FILTER)
+        data["filtersPreview"] = {"Subject": ["python"]}
+        assert "Cooking page" in self.titles(self.render(data))
+
+    @pytest.mark.parametrize("state", ["junk", ["Subject"], 3])
+    def test_a_malformed_preview_state_is_no_state(self, state):
+        block = self.preview(SUBJECT_FILTER, state=state)
+        assert "Cooking page" in self.titles(block)
 
 
 class TestStoredBlock(ListingCase):

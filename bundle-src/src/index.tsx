@@ -1,3 +1,4 @@
+import { withFiltersPreview } from './preview';
 import { registerListingFiltersWidgets } from './widgets';
 import './styles.css';
 
@@ -28,7 +29,13 @@ export default function install(config: any) {
   registerListingFiltersWidgets(config);
   const listing = config.blocks.blocksConfig.listing;
   if (listing) {
-    config.blocks.blocksConfig.listing = { ...listing, blockSchema: withFilters(listing.blockSchema) };
+    config.blocks.blocksConfig.listing = {
+      ...listing,
+      blockSchema: withFilters(listing.blockSchema),
+      // A flag, as the host wraps the component once an install has run.
+      edit: listing.filtersPreview ? listing.edit : withFiltersPreview(listing.edit),
+      filtersPreview: true,
+    };
   }
   return config;
 }

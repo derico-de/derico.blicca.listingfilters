@@ -1,6 +1,122 @@
-import { jsxs, jsx } from "react/jsx-runtime";
-import { useState, useEffect, useId } from "react";
+import { jsx, jsxs } from "react/jsx-runtime";
+import { useState, useRef, useEffect, useId } from "react";
 import config from "@plone/registry";
+const MIN_LETTERS = 3;
+function liveTerm(typed) {
+  const term = typed.trim();
+  return term === "" || term.length >= MIN_LETTERS ? term : null;
+}
+const SEARCH_FIELD = ".listing-filters-search input[type=search]";
+const DELAY = 150;
+function toggled(state, field, value) {
+  const { b_start: _start, ...rest } = state;
+  const picked = state[field] ?? [];
+  return {
+    ...rest,
+    [field]: picked.includes(value) ? picked.filter((item) => item !== value) : [...picked, value]
+  };
+}
+function searched(state, term) {
+  if ((state.SearchableText ?? "") === term) return state;
+  const { b_start: _start, ...rest } = state;
+  return { ...rest, SearchableText: term };
+}
+function withFiltersPreview(CoreEdit) {
+  return function FilteredListingEdit(props) {
+    const [state, setState] = useState({});
+    const container = useRef(null);
+    const typed = useRef(null);
+    const caret = useRef(null);
+    const typing = useRef(false);
+    const leftField = useRef(void 0);
+    const timer = useRef(void 0);
+    useEffect(() => {
+      const observer = new MutationObserver(() => {
+        const field = container.current?.querySelector(SEARCH_FIELD);
+        if (!field) return;
+        if (typed.current !== null && field.value !== typed.current) field.value = typed.current;
+        if (typing.current && field.ownerDocument.activeElement !== field) {
+          field.focus({ preventScroll: true });
+          field.setSelectionRange(caret.current, caret.current);
+        }
+      });
+      observer.observe(container.current, { childList: true, subtree: true });
+      return () => {
+        observer.disconnect();
+        clearTimeout(timer.current);
+        clearTimeout(leftField.current);
+      };
+    }, []);
+    const search = (typedValue) => {
+      clearTimeout(timer.current);
+      const term = liveTerm(typedValue);
+      if (term === null) return;
+      timer.current = setTimeout(() => setState((current) => searched(current, term)), DELAY);
+    };
+    const onClickCapture = (event) => {
+      const link = event.target.closest("a");
+      if (!link) return;
+      if (link.matches(".listing-filters-reset")) {
+        clearTimeout(timer.current);
+        typed.current = "";
+        const field2 = container.current?.querySelector(SEARCH_FIELD);
+        if (field2) field2.value = "";
+        setState({});
+        return;
+      }
+      const start = link.dataset.listingStart;
+      if (start !== void 0) {
+        setState((current) => ({ ...current, b_start: Number(start) }));
+        return;
+      }
+      const field = link.closest("[data-listing-filter]")?.dataset.listingFilter;
+      const value = link.dataset.listingValue;
+      if (field && value !== void 0) {
+        setState((current) => toggled(current, field, value));
+      }
+    };
+    const onInput = (event) => {
+      const field = event.target;
+      if (!field.matches(SEARCH_FIELD)) return;
+      typed.current = field.value;
+      caret.current = field.selectionStart;
+      if (!event.nativeEvent.isComposing) search(field.value);
+    };
+    const onSubmitCapture = (event) => {
+      event.preventDefault();
+      clearTimeout(timer.current);
+      const field = event.target.querySelector(SEARCH_FIELD);
+      if (field) setState((current) => searched(current, field.value.trim()));
+    };
+    const onFocusCapture = (event) => {
+      if (!event.target.matches(SEARCH_FIELD)) return;
+      clearTimeout(leftField.current);
+      typing.current = true;
+    };
+    const onBlurCapture = (event) => {
+      const field = event.target;
+      if (!field.matches(SEARCH_FIELD)) return;
+      caret.current = field.selectionStart;
+      leftField.current = setTimeout(() => {
+        typing.current = false;
+      });
+    };
+    const data = Object.keys(state).length ? { ...props.data, filtersPreview: state } : props.data;
+    return /* @__PURE__ */ jsx(
+      "div",
+      {
+        ref: container,
+        onClickCapture,
+        onInput,
+        onCompositionEnd: onInput,
+        onSubmitCapture,
+        onFocusCapture,
+        onBlurCapture,
+        children: /* @__PURE__ */ jsx(CoreEdit, { ...props, data })
+      }
+    );
+  };
+}
 const TEXT_SEARCH = "SearchableText";
 const TEXT_SEARCH_PROPERTY = { field: TEXT_SEARCH, title: "Text search", values: [] };
 const NOT_A_PROPERTY = ["show_inactive"];
@@ -210,7 +326,13 @@ function install(config2) {
   registerListingFiltersWidgets(config2);
   const listing = config2.blocks.blocksConfig.listing;
   if (listing) {
-    config2.blocks.blocksConfig.listing = { ...listing, blockSchema: withFilters(listing.blockSchema) };
+    config2.blocks.blocksConfig.listing = {
+      ...listing,
+      blockSchema: withFilters(listing.blockSchema),
+      // A flag, as the host wraps the component once an install has run.
+      edit: listing.filtersPreview ? listing.edit : withFiltersPreview(listing.edit),
+      filtersPreview: true
+    };
   }
   return config2;
 }

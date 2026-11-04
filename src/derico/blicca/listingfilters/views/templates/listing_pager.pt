@@ -7,11 +7,17 @@
      tal:define="pager view/pager">
   <a rel="prev"
      tal:condition="pager/previous"
-     tal:attributes="href pager/previous"
+     tal:attributes="href pager/previous;
+                     class view/inject_class;
+                     data-pat-inject view/pager_inject_config;
+                     data-listing-start pager/previous_start"
      i18n:translate="">Previous</a>
   <span i18n:translate="">Page <tal:page i18n:name="page" tal:replace="pager/page" /> of <tal:pages i18n:name="pages" tal:replace="pager/pages" /></span>
   <a rel="next"
      tal:condition="pager/next"
-     tal:attributes="href pager/next"
+     tal:attributes="href pager/next;
+                     class view/inject_class;
+                     data-pat-inject view/pager_inject_config;
+                     data-listing-start pager/next_start"
      i18n:translate="">Next</a>
 </nav>

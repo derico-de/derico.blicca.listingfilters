@@ -17,6 +17,7 @@
     "test",
     "build-plugins",
     "vite.config.ts",
+    "vite.live.config.ts",
     "vitest.config.ts"
   ]
 }

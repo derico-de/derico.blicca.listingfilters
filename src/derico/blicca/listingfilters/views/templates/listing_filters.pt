@@ -5,15 +5,22 @@
      role="group"
      aria-label="Filter results"
      i18n:attributes="aria-label"
-     tal:attributes="id view/anchor">
+     tal:attributes="id view/anchor;
+                     data-listing-block python: view.block_id or None">
+
+  <script type="module"
+          tal:define="live_search_url view/live_search_url"
+          tal:condition="live_search_url"
+          tal:attributes="src live_search_url"></script>
 
   <tal:group tal:repeat="group view/groups">
-    <form class="listing-filters-search"
-          role="search"
+    <form role="search"
           method="get"
           tal:condition="python: group['kind'] == 'search'"
-          tal:attributes="action group/action">
-      <fieldset tal:attributes="disabled group/disabled">
+          tal:attributes="action group/action;
+                          class python: f'listing-filters-search {view.inject_class or str()}'.strip();
+                          data-pat-inject view/inject_config">
+      <fieldset>
         <label>
           <span class="listing-filter-label"
                 tal:content="group/title">Search</span>
@@ -21,34 +28,49 @@
                  tal:attributes="name group/name;
                                  value group/value" />
         </label>
-        <input type="hidden"
-               tal:repeat="param group/hidden"
-               tal:attributes="name python: param[0];
-                               value python: param[1]" />
+        <div hidden="hidden"
+             tal:attributes="id view/state_region">
+          <input type="hidden"
+                 tal:repeat="param group/hidden"
+                 tal:attributes="name python: param[0];
+                                 value python: param[1]" />
+        </div>
         <button type="submit"
                 i18n:translate="">Search</button>
       </fieldset>
     </form>
 
     <div class="listing-filter"
-         tal:condition="python: group['kind'] == 'options'">
-      <p class="listing-filter-title"
-         tal:content="group/title">Tag</p>
-      <ul class="listing-filter-options"
-          tal:attributes="data-listing-filter group/field;
-                          aria-label group/title">
-        <li tal:repeat="option group/options">
-          <a tal:attributes="href option/href;
-                             aria-current python: 'true' if option['selected'] else None"
-             tal:content="option/title">Value</a>
-        </li>
-      </ul>
+         tal:condition="python: group['kind'] == 'options'"
+         tal:attributes="id group/id;
+                         hidden group/hidden">
+      <tal:options tal:condition="group/options">
+        <p class="listing-filter-title"
+           tal:content="group/title">Tag</p>
+        <ul class="listing-filter-options"
+            tal:attributes="data-listing-filter group/field;
+                            aria-label group/title">
+          <li tal:repeat="option group/options">
+            <a tal:attributes="href option/href;
+                               class view/inject_class;
+                               data-pat-inject view/inject_config;
+                               data-listing-value option/value;
+                               aria-current python: 'true' if option['selected'] else None"
+               tal:content="option/title">Value</a>
+          </li>
+        </ul>
+      </tal:options>
     </div>
   </tal:group>
 
-  <a class="listing-filters-reset"
-     tal:define="reset_url view/reset_url"
-     tal:condition="reset_url"
-     tal:attributes="href reset_url"
-     i18n:translate="">Reset filters</a>
+  <div class="listing-filters-reset-region"
+       tal:define="reset_url view/reset_url"
+       tal:attributes="id view/reset_region;
+                       hidden python: None if reset_url else 'hidden'">
+    <a tal:condition="reset_url"
+       tal:attributes="href reset_url;
+                       class python: f'listing-filters-reset {view.inject_class or str()}'.strip();
+                       data-pat-inject view/inject_config"
+       i18n:translate="">Reset filters</a>
+  </div>
 </div>

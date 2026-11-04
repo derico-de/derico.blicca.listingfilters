@@ -1,15 +1,18 @@
 /* E2E: staff set up filters on a listing, visitors narrow it.
  *
  *  1. In the editor, the listing's Filters setting adds a Tag filter with an
- *     allow list and a text search. The canvas previews them, and a click on
- *     a preview option stays in the editor.
+ *     allow list and a text search. The canvas narrows like a public page:
+ *     options, the live search from the third letter, the pager and reset
+ *     all work, stay in the editor, and none of it is stored.
  *  2. Saved, a visitor sees the allow list's options, in its order. An
  *     allowed tag only found outside the listing's results is not offered.
  *  3. An option narrows the results and the other filters' options, and
- *     shows as selected.
- *  4. The text search narrows the results, and reset brings them all back.
+ *     shows as selected, without loading the page.
+ *  4. The search narrows from the third letter while the field keeps its
+ *     focus, and reset brings all results back.
  *  5. The pager walks the results.
- *  6. The listing without filters on the same page is left alone.
+ *  6. The URL holds the selection, and Back returns to the last one.
+ *  7. The listing without filters on the same page is left alone.
  *
  * Prerequisites: a running Plone site with derico.blicca.listingfilters
  * installed. Configure via environment:
@@ -39,6 +42,7 @@ const FOLDER_ID = 'listingfilters-e2e';
 const ELSEWHERE_ID = 'listingfilters-e2e-elsewhere';
 const PAGE_ID = 'page';
 const BLOCK_ID = 'filtered';
+const SECOND_ID = 'second';
 const RED = 'e2e-red';
 const BLUE = 'e2e-blue';
 const GREEN = 'e2e-green';
@@ -84,6 +88,19 @@ function expectEqual(actual, expected, what) {
     console.log(`ok: ${what}`);
   }
 }
+
+async function until(read, expected, what, timeout = 8000) {
+  const deadline = Date.now() + timeout;
+  let actual = await read();
+  while (JSON.stringify(actual) !== JSON.stringify(expected) && Date.now() < deadline) {
+    await new Promise((settled) => setTimeout(settled, 50));
+    actual = await read();
+  }
+  expectEqual(actual, expected, what);
+}
+
+const shownTitles = async (listing) =>
+  (await listing.locator('.listing-items :is(h2, h3, h4)').allTextContents()).map((title) => title.trim());
 
 const listingBlock = (id, headline) => ({
   type: 'ploneBlock',
@@ -180,16 +197,9 @@ async function setUpFiltersInTheEditor(page) {
     { timeout: 15000 },
   );
   expectEqual(await options.allTextContents(), [GREEN, RED], 'the canvas previews the filters');
-  expectEqual(
-    await block.locator('.listing-filters-search input[type=search]').isDisabled(),
-    true,
-    'the preview cannot be searched',
-  );
   const editing = page.url();
-  await options.first().click();
-  await page.waitForTimeout(300);
-  expectEqual(page.url(), editing, 'a click on a preview option stays in the editor');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/editor.png`, fullPage: true });
+  await narrowOnTheCanvas(page, block, options);
+  expectEqual(page.url(), editing, 'narrowing the preview stays in the editor');
 
   await Promise.all([
     page.waitForResponse((response) => response.request().method() === 'PATCH' && response.ok(), { timeout: 15000 }),
@@ -205,6 +215,45 @@ async function setUpFiltersInTheEditor(page) {
     ],
     'the setting is stored',
   );
+  expectEqual(stored.filtersPreview, undefined, 'what narrowed the preview is not stored');
+}
+
+async function narrowOnTheCanvas(page, block, options) {
+  const search = block.locator('.listing-filters-search input[type=search]');
+  const titles = () => shownTitles(block);
+  const hasFocus = () => search.evaluate((field) => document.activeElement === field);
+  const selected = block.locator('.listing-filter-options a[aria-current]');
+
+  await options.filter({ hasText: RED }).click();
+  await until(() => selected.allTextContents(), [RED], 'a preview option shows as selected');
+  await until(titles, ['Alpha', 'Beta'], 'a preview option narrows the results');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/editor.png`, fullPage: true });
+  await options.filter({ hasText: RED }).click();
+  await until(() => selected.count(), 0, 'a second click deselects it');
+
+  await block.locator('.listing-pager a[rel=next]').click();
+  await until(titles, ['Gamma'], 'the preview pager shows the next page');
+  await block.locator('.listing-pager a[rel=prev]').click();
+  await until(titles, ['Alpha', 'Beta'], 'the preview pager goes back');
+
+  await search.click();
+  await search.pressSequentially('ne', { delay: 40 });
+  await page.waitForTimeout(600);
+  expectEqual(await titles(), ['Alpha', 'Beta'], 'the preview does not search for two letters');
+  await search.pressSequentially('edle', { delay: 40 });
+  await until(titles, ['Gamma'], 'the preview searches live');
+  expectEqual(await search.inputValue(), 'needle', 'the preview keeps what was typed');
+  expectEqual(await hasFocus(), true, 'the preview search keeps its focus');
+
+  await search.press('Backspace');
+  await page.waitForTimeout(600);
+  expectEqual(await search.inputValue(), 'needl', 'Backspace edits the term');
+  expectEqual(await block.count(), 1, 'Backspace leaves the block in place');
+  expectEqual(await hasFocus(), true, 'the preview search still has its focus');
+
+  await block.locator('.listing-filters-reset').click();
+  await until(titles, ['Alpha', 'Beta'], 'preview reset brings the results back');
+  expectEqual(await search.inputValue(), '', 'preview reset empties the search');
 }
 
 const underline = (link) => link.evaluate((node) => getComputedStyle(node).textDecorationLine);
@@ -212,13 +261,19 @@ const underline = (link) => link.evaluate((node) => getComputedStyle(node).textD
 async function visit(page) {
   const filtered = page.locator('.listing', { has: page.locator('.listing-filters') });
   const plain = page.locator('.listing', { hasNot: page.locator('.listing-filters') });
-  const titles = (listing) => listing.locator('.listing-items :is(h2, h3, h4)').allTextContents();
-  const shownTitles = async (listing) => (await titles(listing)).map((title) => title.trim());
   const options = filtered.locator('.listing-filter-options a');
-  const settled = () => page.waitForLoadState('load');
   const url = `${BASE}/${FOLDER_ID}/${PAGE_ID}`;
+  // pat-inject swaps the results region last.
+  const swapped = async (act) => {
+    const results = await filtered.locator('.listing-results').elementHandle();
+    await act();
+    await page.waitForFunction((element) => !element.isConnected, results, { timeout: 8000 });
+  };
 
   await page.goto(url, { waitUntil: 'load' });
+  // pat-inject finds its triggers once the bundle has run.
+  await page.waitForFunction(() => document.querySelector('a.pat-inject') && window.jQuery?.(document.querySelector('a.pat-inject')).data('pat-inject'));
+  await page.evaluate(() => { window.listingFiltersSameDocument = true; });
   expectEqual(await page.locator('.listing-filters').count(), 1, 'only the listing with filters offers them');
   expectEqual(await filtered.locator('.listing-filter-title').allTextContents(), ['Topic'], 'the title staff chose');
   expectEqual(await options.allTextContents(), [GREEN, RED], 'the allow list limits and orders the options');
@@ -232,16 +287,21 @@ async function visit(page) {
   expectEqual(await underline(filtered.locator('.listing-pager a[rel=next]')), 'underline', 'the pager reads as a link');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/public.png`, fullPage: true });
 
-  await filtered.locator('.listing-pager a[rel=next]').click();
-  await settled();
+  await swapped(() => filtered.locator('.listing-pager a[rel=next]').click());
   expectEqual(await shownTitles(filtered), ['Gamma'], 'the pager shows the next page');
   expectEqual(await shownTitles(plain), ['Alpha', 'Beta'], 'the pager leaves the listing without filters alone');
+  await swapped(() => filtered.locator('.listing-pager a[rel=prev]').click());
+  expectEqual(await shownTitles(filtered), ['Alpha', 'Beta'], 'the pager goes back');
 
-  await page.goto(url, { waitUntil: 'load' });
-  await options.filter({ hasText: RED }).click();
-  await settled();
+  await options.filter({ hasText: RED }).focus();
+  await swapped(() => page.keyboard.press('Enter'));
   expectEqual(new URL(page.url()).searchParams.getAll(`${BLOCK_ID}.Subject`), [RED], 'the option is in the URL');
   expectEqual(await shownTitles(filtered), ['Alpha', 'Beta'], 'an option narrows the results');
+  expectEqual(
+    await page.evaluate(() => document.activeElement?.textContent),
+    RED,
+    'the keyboard stays on the option it chose',
+  );
   expectEqual(await options.allTextContents(), [GREEN, RED], 'a filter keeps its other options');
   const selected = filtered.locator('.listing-filter-options a[aria-current]');
   expectEqual(await selected.allTextContents(), [RED], 'the option shows as selected');
@@ -249,28 +309,82 @@ async function visit(page) {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/selected.png`, fullPage: true });
 
   const search = filtered.locator('.listing-filters-search input[type=search]');
-  // One read: the page is still scrolling to the listing's anchor.
   const offset = await filtered.locator('.listing-filters-search fieldset').evaluate((fieldset) => {
     const bottom = (selector) => fieldset.querySelector(selector).getBoundingClientRect().bottom;
     return Math.round(bottom('input[type=search]') - bottom('button'));
   });
   expectEqual(offset, 0, 'the search box and its button line up');
   await search.fill('needle');
-  await search.press('Enter');
-  await settled();
+  await swapped(() => search.press('Enter'));
   expectEqual(await filtered.locator('.listing-empty').count(), 1, 'the search narrows within the selection');
+  expectEqual(await search.inputValue(), 'needle', 'Enter keeps the term in the field');
 
-  await filtered.locator('.listing-filters-reset').click();
-  await settled();
+  await swapped(() => filtered.locator('.listing-filters-reset').click());
   expectEqual(await shownTitles(filtered), ['Alpha', 'Beta'], 'reset brings the results back');
-  expectEqual(await filtered.locator('.listing-filters-reset').count(), 0, 'with nothing chosen there is no reset');
+  expectEqual(await filtered.locator('.listing-filters-reset').isVisible(), false, 'with nothing chosen there is no reset');
+  expectEqual(await search.inputValue(), '', 'reset empties the search');
+  expectEqual(new URL(page.url()).search, '', 'reset empties the URL');
 
-  await search.fill('needle');
-  await search.press('Enter');
-  await settled();
-  expectEqual(await shownTitles(filtered), ['Gamma'], 'the text search narrows the results');
+  await search.click();
+  await search.pressSequentially('ne', { delay: 40 });
+  await page.waitForTimeout(600);
+  expectEqual(await shownTitles(filtered), ['Alpha', 'Beta'], 'two letters do not search yet');
+  expectEqual(new URL(page.url()).search, '', 'two letters stay out of the URL');
+  await swapped(() => search.pressSequentially('edle', { delay: 40 }));
+  await until(() => shownTitles(filtered), ['Gamma'], 'the search narrows live');
+  expectEqual(await search.inputValue(), 'needle', 'the field keeps what was typed');
+  expectEqual(await search.evaluate((field) => document.activeElement === field), true, 'the field keeps its focus');
+  await until(() => new URL(page.url()).searchParams.get(`${BLOCK_ID}.SearchableText`), 'needle', 'the term is in the URL');
   expectEqual(await options.allTextContents(), [GREEN], 'the options follow the text search');
   expectEqual(await shownTitles(plain), ['Alpha', 'Beta'], 'the search leaves the listing without filters alone');
+  expectEqual(await page.evaluate(() => window.listingFiltersSameDocument), true, 'nothing so far loaded the page');
+
+  const bookmark = page.url();
+  // pat-inject reloads on Back.
+  await page.goBack();
+  await page.waitForFunction(() => !window.listingFiltersSameDocument);
+  await page.waitForLoadState('load');
+  expectEqual(await shownTitles(filtered), ['Alpha', 'Beta'], 'Back returns to the last selection');
+  await page.goto(bookmark, { waitUntil: 'load' });
+  expectEqual(await shownTitles(filtered), ['Gamma'], 'the URL holds the search');
+  expectEqual(await search.inputValue(), 'needle', 'the URL fills the field');
+}
+
+/* A second listing with filters: narrowing one keeps the other's selection,
+ * though pat-inject read that listing's URLs when the page loaded. */
+async function visitTwoListings(page) {
+  const first = page.locator(`.listing:has(#listing-${BLOCK_ID})`);
+  const second = page.locator(`.listing:has(#listing-${SECOND_ID})`);
+  await page.goto(`${BASE}/${FOLDER_ID}/${PAGE_ID}`, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.jQuery?.(document.querySelector('a.pat-inject')).data('pat-inject'));
+  const firstResults = await first.locator('.listing-results').elementHandle();
+  await first.locator('.listing-filter-options a').filter({ hasText: GREEN }).click();
+  await page.waitForFunction((element) => !element.isConnected, firstResults, { timeout: 8000 });
+  expectEqual(await shownTitles(second), ['Alpha', 'Beta'], 'one listing leaves the other alone');
+
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: 'load' }),
+    second.locator('.listing-filter-options a').filter({ hasText: BLUE }).click(),
+  ]);
+  const params = new URL(page.url()).searchParams;
+  expectEqual(
+    [params.get(`${BLOCK_ID}.Subject`), params.get(`${SECOND_ID}.Subject`)],
+    [GREEN, BLUE],
+    'the other listing keeps its selection',
+  );
+  expectEqual(await shownTitles(first), ['Gamma'], 'the first listing is still narrowed');
+  expectEqual(await shownTitles(second), ['Alpha'], 'the second listing is narrowed too');
+}
+
+async function addSecondFilteredListing() {
+  const path = `/${FOLDER_ID}/${PAGE_ID}`;
+  const { blocks } = await api('GET', path);
+  const filters = [{ field: 'Subject', title: '', allowList: [] }];
+  const value = [
+    ...blocks.__somersault__.value.map(({ items: _derived, ...node }) => node),
+    { ...listingBlock(SECOND_ID, 'Second'), filters },
+  ];
+  await api('PATCH', path, { blocks: { ...blocks, __somersault__: { ...blocks.__somersault__, value } } });
 }
 
 (async () => {
@@ -288,6 +402,8 @@ async function visit(page) {
     const viewport = { width: 1400, height: 1000 };
     await setUpFiltersInTheEditor(await newPage(await browser.newContext({ viewport })));
     await visit(await newPage(await browser.newContext({ viewport })));
+    await addSecondFilteredListing();
+    await visitTwoListings(await newPage(await browser.newContext({ viewport })));
     if (pageErrors.length) fail(`uncaught page errors:\n${pageErrors.join('\n')}`);
     if (process.exitCode !== 1) console.log('PASS');
   } finally {

@@ -85,15 +85,6 @@
   cursor: pointer;
 }
 
-.listing-filters .listing-filters-search fieldset:disabled button {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.listing-filters .listing-filters-reset {
-  align-self: flex-start;
-}
-
 /* The core block takes the underline off `.listing a`: these two are the
    listing's only links without a border or a heading to read as links. */
 .listing .listing-filters .listing-filters-reset,
@@ -108,4 +99,10 @@
   justify-content: center;
   gap: 1rem;
   margin-block-start: var(--listing-filters-gap, 1rem);
+}
+
+/* pat-inject's class on a public page, the core preview's state on the canvas. */
+.listing-results.injecting,
+[aria-busy='true'] .listing-results {
+  opacity: 0.6;
 }

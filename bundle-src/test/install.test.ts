@@ -38,8 +38,19 @@ describe('install', () => {
     const listing = install(hostConfig()).blocks.blocksConfig.listing;
 
     expect(listing.view).toBe(CoreView);
-    expect(listing.edit).toBe(CoreEdit);
     expect(listing.icon).toBe('icon');
+  });
+
+  it('wraps the canvas once when installed twice', () => {
+    const once = install(hostConfig()).blocks.blocksConfig.listing.edit;
+    const config = hostConfig();
+    install(config);
+    const first = config.blocks.blocksConfig.listing.edit;
+
+    install(config);
+
+    expect(once).not.toBe(CoreEdit);
+    expect(config.blocks.blocksConfig.listing.edit).toBe(first);
   });
 
   it('passes the arguments on to the core schema', () => {

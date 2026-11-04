@@ -1,5 +1,6 @@
 """The core listing block, with filters a visitor narrows it by."""
 
+import html
 import json
 from collections import namedtuple
 from functools import cached_property
@@ -31,6 +32,10 @@ from derico.blicca.listingfilters.i18n import _
 
 
 TEXT_FIELD = "SearchableText"
+# What the editor's canvas narrows its preview by, never stored.
+PREVIEW_STATE = "filtersPreview"
+# What pat-inject's request adds to its URL.
+CACHE_BUSTER = "_"
 # Effective ranges and relative dates move on without the catalog changing.
 RECHECK_SECONDS = 300
 
@@ -160,7 +165,10 @@ class FilteredListingBlockView(ListingBlockView):
         return f"{self.block_id}.{name}"
 
     def _sent(self, name):
-        return self.request.form.get(self._param(name)) if self.block_id else None
+        if self.block_id:
+            return self.request.form.get(self._param(name))
+        state = (self.data or {}).get(PREVIEW_STATE)
+        return state.get(name) if isinstance(state, dict) else None
 
     @cached_property
     def chosen(self):
@@ -217,7 +225,9 @@ class FilteredListingBlockView(ListingBlockView):
         own = f"{self.block_id}."
         query = self.request.get("QUERY_STRING") or ""
         return [
-            pair for pair in parse_qsl(query, keep_blank_values=True) if not pair[0].startswith(own)
+            pair
+            for pair in parse_qsl(query, keep_blank_values=True)
+            if not pair[0].startswith(own) and pair[0] != CACHE_BUSTER
         ]
 
     def _selection_params(self, selected):
@@ -246,11 +256,53 @@ class FilteredListingBlockView(ListingBlockView):
         title = _field_record(field, "title") or field
         return translate(title, domain="plone", context=self.request)
 
+    def _region(self, name):
+        return f"{self.anchor}-{name}" if self.block_id else None
+
+    @cached_property
+    def _swapped_regions(self):
+        """Never the search field, which a visitor may still be typing in."""
+        regions = [self._region(f"filter-{field}") for field in self.allow_lists]
+        if TEXT_FIELD in self.filters:
+            regions.append(self._region("state"))
+        return [*regions, self._region("reset"), self._region("results")]
+
+    def _inject_config(self, scroll=False):
+        if not self.block_id:
+            return None
+        swaps = [
+            f"source: #{id_}::element; target: #{id_}::element" for id_ in self._swapped_regions
+        ]
+        swaps[0] += "; history: record"
+        if scroll:
+            swaps[-1] += f"; scroll: #{self._region('results')}"
+        return " && ".join(swaps)
+
+    @property
+    def inject_class(self):
+        return "pat-inject" if self.block_id else None
+
+    @property
+    def inject_config(self):
+        return self._inject_config()
+
+    @property
+    def pager_inject_config(self):
+        return self._inject_config(scroll=True)
+
+    @property
+    def live_search_url(self):
+        if not self.block_id:
+            return None
+        portal_url = getToolByName(self.context, "portal_url")()
+        return f"{portal_url}/++plone++derico.blicca.listingfilters/listing-filters-live.js"
+
     def _option(self, field, value, title):
         picked = self.narrowed.selected[field]
         toggled = picked ^ {value}
         return {
             "title": title,
+            "value": value,
             "selected": value in picked,
             "href": self._href({**self.narrowed.selected, field: toggled}, self.term),
         }
@@ -261,6 +313,8 @@ class FilteredListingBlockView(ListingBlockView):
         values = ordered_options(titles, entry["allow_list"])
         return {
             "kind": "options",
+            "id": self._region(f"filter-{field}"),
+            "hidden": "hidden" if not titles else None,
             "field": field,
             "title": entry["title"] or self._title_of(field),
             "options": [self._option(field, value, titles[value]) for value in values],
@@ -272,7 +326,6 @@ class FilteredListingBlockView(ListingBlockView):
             "title": entry["title"] or translate(_("Search"), context=self.request),
             "name": self._param(TEXT_FIELD),
             "value": self.term,
-            "disabled": "disabled" if not self.block_id else None,
             "action": f"{self._base_url}#{self.anchor}" if self.block_id else "#",
             "hidden": (
                 self._foreign_params + self._selection_params(self.narrowed.selected)
@@ -287,19 +340,37 @@ class FilteredListingBlockView(ListingBlockView):
         for field, entry in self.filters.items():
             if field == TEXT_FIELD:
                 groups.append(self._search_group(entry))
-            elif self.narrowed.options[field]:
+            else:
                 groups.append(self._options_group(entry))
         return groups
 
     @property
     def reset_url(self):
-        if not self.block_id or not (self.term or any(self.narrowed.selected.values())):
+        if not (self.term or any(self.narrowed.selected.values())):
             return None
         return self._href({})
 
     @property
+    def reset_region(self):
+        return self._region("reset")
+
+    @property
+    def state_region(self):
+        return self._region("state")
+
+    @property
     def above_items(self):
-        return self.filters_template() if self.filters else ""
+        if not self.filters:
+            return ""
+        # Opens what below_items closes: an injection swaps the results and
+        # the pager as one, and the core template has no element around them.
+        attributes = (
+            f' id="{html.escape(self._region("results"))}"'
+            f' data-listing-block="{html.escape(self.block_id)}"'
+            if self.block_id
+            else ""
+        )
+        return f'{self.filters_template()}<div class="listing-results"{attributes}>'
 
     @property
     def pager(self):
@@ -310,6 +381,8 @@ class FilteredListingBlockView(ListingBlockView):
         return {
             "page": self.start // self.page_size + 1,
             "pages": (len(self.narrowed.results) - 1) // self.page_size + 1,
+            "previous_start": max(previous_start, 0),
+            "next_start": next_start,
             "previous": (
                 self._href(self.narrowed.selected, self.term, max(previous_start, 0))
                 if self.start > 0
@@ -324,4 +397,6 @@ class FilteredListingBlockView(ListingBlockView):
 
     @property
     def below_items(self):
-        return self.pager_template() if self.filters and self.pager else ""
+        if not self.filters:
+            return ""
+        return f"{self.pager_template() if self.pager else ''}</div>"
