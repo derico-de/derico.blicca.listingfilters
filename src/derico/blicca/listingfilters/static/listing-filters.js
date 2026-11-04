@@ -141,17 +141,20 @@ function ListingFiltersWidget(props) {
                   ]
                 }
               ),
-              /* @__PURE__ */ jsx(
-                "input",
-                {
-                  type: "text",
-                  "aria-label": `Filter ${position} title`,
-                  className: controlClass,
-                  placeholder: property?.title ?? filter.field,
-                  value: filter.title,
-                  onChange: (event) => updateRow(index, { title: event.target.value })
-                }
-              ),
+              /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
+                /* @__PURE__ */ jsx("span", { className: labelClass, children: "Title" }),
+                /* @__PURE__ */ jsx(
+                  "input",
+                  {
+                    type: "text",
+                    "aria-label": `Filter ${position} title`,
+                    className: controlClass,
+                    placeholder: property?.title ?? filter.field,
+                    value: filter.title,
+                    onChange: (event) => updateRow(index, { title: event.target.value })
+                  }
+                )
+              ] }),
               filter.field === TEXT_SEARCH ? null : /* @__PURE__ */ jsx(
                 AllowList,
                 {

@@ -150,14 +150,17 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
                     </option>
                   ))}
               </select>
-              <input
-                type="text"
-                aria-label={`Filter ${position} title`}
-                className={controlClass}
-                placeholder={property?.title ?? filter.field}
-                value={filter.title}
-                onChange={(event) => updateRow(index, { title: event.target.value })}
-              />
+              <div className="flex flex-col gap-1">
+                <span className={labelClass}>Title</span>
+                <input
+                  type="text"
+                  aria-label={`Filter ${position} title`}
+                  className={controlClass}
+                  placeholder={property?.title ?? filter.field}
+                  value={filter.title}
+                  onChange={(event) => updateRow(index, { title: event.target.value })}
+                />
+              </div>
               {filter.field === TEXT_SEARCH ? null : (
                 <AllowList
                   position={position}

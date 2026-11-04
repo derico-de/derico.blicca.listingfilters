@@ -119,6 +119,14 @@ describe('the properties a filter can use', () => {
 });
 
 describe('the filter rows', () => {
+  it('labels the title field so its placeholder does not read as a value', async () => {
+    await renderWidget([{ field: 'Subject', title: '', allowList: [] }]);
+
+    const label = screen.getByText('Title');
+    const field = screen.getByRole('textbox', { name: 'Filter 1 title' });
+    expect(label.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('adds a filter on the first unused property', async () => {
     const { add, stored } = await renderWidget([{ field: 'Subject', title: '', allowList: [] }]);
 
