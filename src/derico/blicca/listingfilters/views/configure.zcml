@@ -1,0 +1,14 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    i18n_domain="derico.blicca.listingfilters">
+
+  <browser:page
+      name="aurora-block-listing"
+      for="*"
+      class=".filtered_listing_block_view.FilteredListingBlockView"
+      permission="zope2.View"
+      layer="derico.blicca.listingfilters.interfaces.IDericoBliccaListingfiltersLayer"
+      />
+
+</configure>

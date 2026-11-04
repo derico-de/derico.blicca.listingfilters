@@ -32,4 +32,7 @@
       handler="derico.blicca.listingfilters.setuphandlers.uninstall"
       />
 
+
+  <include package=".views" />
+
 </configure>
