@@ -1,0 +1,111 @@
+[project]
+name = "derico.blicca.listingfilters"
+version = "1.0.0a1"
+description = "Listing filters for Plone Blicca: visitors narrow a listing by tags, other properties or a text search, with options from that listing's own results"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "GPL-2.0-or-later"}
+authors = [
+    {name = "Maik Derstappen", email = "md@derico.de"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Plone",
+    "Framework :: Plone :: Addon",
+    "Framework :: Plone :: 6.2",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = ["Plone", "CMS"]
+
+dependencies = [
+    "Plone>=6.2",
+    "setuptools<81",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-plone>=0.5.0",
+    "plone.app.testing",
+    "plone.testing",
+]
+
+[project.urls]
+Homepage = "https://github.com/derico.blicca/derico.blicca.listingfilters"
+Documentation = "https://github.com/derico.blicca/derico.blicca.listingfilters"
+Repository = "https://github.com/derico.blicca/derico.blicca.listingfilters.git"
+Issues = "https://github.com/derico.blicca/derico.blicca.listingfilters/issues"
+
+[project.entry-points."z3c.autoinclude.plugin"]
+target = "plone"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/derico"]
+
+[tool.plone.backend_addon.settings]
+package_name = "derico.blicca.listingfilters"
+package_title = "Derico Blicca Listingfilters"
+package_description = "Listing filters for Plone Blicca: visitors narrow a listing by tags, other properties or a text search, with options from that listing's own results"
+package_folder = "derico/blicca/listingfilters"
+plone_version = "6.2"
+is_headless = false
+author_name = "Maik Derstappen"
+author_email = "md@derico.de"
+
+[tool.plone.backend_addon.settings.subtemplates]
+content_types = []
+behaviors = []
+services = []
+
+[tool.pytest.ini_options]
+testpaths = ["src/derico/blicca/listingfilters/tests"]
+python_files = ["test_*.py"]
+
+[tool.coverage.run]
+source = ["derico.blicca.listingfilters"]
+omit = ["*/tests/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "W",    # pycodestyle warnings
+    "C90",  # mccabe complexity
+    "B",    # bugbear
+    "S",    # bandit (security)
+    "UP",   # pyupgrade
+    "SIM",  # simplify
+    "PGH",  # pygrep-hooks
+]
+ignore = ["E731"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/**/tests/**" = ["S101"]
+# Locale update helper shells out to fixed translation tools (i18ndude/msginit).
+"src/**/locales/update.py" = ["S603", "S607"]
+
+[tool.ruff.lint.isort]
+# Match the single-import-per-line, alphabetical layout the templates emit.
+force-single-line = true
+order-by-type = false
+lines-after-imports = 2
+known-first-party = ["derico"]
+
+[tool.ruff.format]
+preview = true
