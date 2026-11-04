@@ -15,14 +15,8 @@
       destination="1001"
       profile="derico.blicca.listingfilters:default">
 
-    <genericsetup:upgradeStep
-        title="Register the listing override"
-        description="A custom upgrade step"
-        handler=".v1001.upgrade"
-        />
-
     <genericsetup:upgradeDepends
-        title="Apply profile version 1001"
+        title="Register the listing override"
         import_profile="derico.blicca.listingfilters.upgrades:1001"
         />
 

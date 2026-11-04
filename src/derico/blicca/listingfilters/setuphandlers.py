@@ -11,6 +11,7 @@ class HiddenProfiles:
         """Return list of profiles that should not be available for install."""
         return [
             "derico.blicca.listingfilters:uninstall",
+            "derico.blicca.listingfilters.upgrades:1001",
         ]
 
 

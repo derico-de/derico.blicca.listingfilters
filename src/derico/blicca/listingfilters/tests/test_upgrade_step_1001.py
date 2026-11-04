@@ -1,30 +1,29 @@
 """Tests for upgrade step 1000 -> 1001."""
+
 import pytest
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
+from plone.registry.interfaces import IRegistry
+from zope.component import getUtility
 
-from derico.blicca.listingfilters.testing import INTEGRATION_TESTING
+from derico.blicca.listingfilters.tests.test_setup import RECORD
+
+
+PROFILE = "derico.blicca.listingfilters:default"
 
 
 class TestUpgrade1001:
-    """Test upgrade to version 1001."""
-
-    layer = INTEGRATION_TESTING
-
     @pytest.fixture(autouse=True)
     def _setup(self, integration):
         self.portal = integration["portal"]
         setRoles(self.portal, TEST_USER_ID, ["Manager"])
+        self.registry = getUtility(IRegistry)
 
-    def test_upgrade_handler_importable(self):
-        """Test the upgrade handler can be imported."""
-        from derico.blicca.listingfilters.upgrades.v1001 import upgrade
-
-        assert callable(upgrade)
-
-    def test_upgrade_handler_runs(self):
-        """Test the upgrade handler can be executed."""
-        from derico.blicca.listingfilters.upgrades.v1001 import upgrade
-
-        setup_tool = self.portal.portal_setup
-        upgrade(setup_tool)
+    def test_a_site_at_1000_gets_the_record(self):
+        for name in [name for name in self.registry.records.keys() if name.startswith(RECORD)]:
+            del self.registry.records[name]
+        setup = self.portal.portal_setup
+        setup.setLastVersionForProfile(PROFILE, "1000")
+        setup.upgradeProfile(PROFILE)
+        assert self.registry[f"{RECORD}.overrides"] == ["listing"]
+        assert setup.getLastVersionForProfile(PROFILE) == ("1001",)
