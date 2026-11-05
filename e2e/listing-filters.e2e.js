@@ -196,7 +196,7 @@ async function setUpFiltersInTheEditor(page) {
     'maximum results is the very next field after results per page',
   );
   if (SHOTS) {
-    await batchSize.scrollIntoViewIfNeeded();
+    await filtersToggle.scrollIntoViewIfNeeded();
     await sidebar.screenshot({ path: `${SHOTS}/sidebar.png` });
   }
   await filtersToggle.click();
