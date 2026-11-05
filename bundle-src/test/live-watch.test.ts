@@ -244,3 +244,40 @@ describe('the keyboard focus', () => {
     expect(document.activeElement).toBe(field());
   });
 });
+
+describe('the placeholder behind a result image', () => {
+  const addImage = (naturalWidth = 0, complete = false) => {
+    const image = document.createElement('img');
+    Object.defineProperties(image, {
+      naturalWidth: { value: naturalWidth },
+      complete: { value: complete },
+    });
+    document.getElementById('listing-a-results')!.prepend(image);
+    return image;
+  };
+  const loaded = (image: HTMLImageElement) => image.classList.contains('listing-image-loaded');
+
+  it('stays until the image has loaded', () => {
+    const image = addImage();
+    expect(loaded(image)).toBe(false);
+    image.dispatchEvent(new Event('load'));
+    expect(loaded(image)).toBe(true);
+  });
+
+  it('leaves an image outside the results alone', () => {
+    const image = document.createElement('img');
+    document.querySelector('.listing-filters')!.prepend(image);
+    image.dispatchEvent(new Event('load'));
+    expect(loaded(image)).toBe(false);
+  });
+
+  it('goes for an image that loaded before the script ran', () => {
+    const image = addImage(640, true);
+    const pending = addImage();
+    const broken = addImage(0, true);
+    watchListings(document);
+    expect(loaded(image)).toBe(true);
+    expect(loaded(pending)).toBe(false);
+    expect(loaded(broken)).toBe(false);
+  });
+});

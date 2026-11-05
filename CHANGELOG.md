@@ -13,3 +13,5 @@
   time while its filters and search still cover all of them.
 - Move **Results per page** directly above **Maximum results** in the default
   listing settings, outside the collapsed **Filters** section.
+- Show a placeholder behind a result image until it has loaded, on the page's
+  first load and after a swap. `--listing-filters-image-placeholder` sets it.
