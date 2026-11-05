@@ -187,7 +187,7 @@ value wins:
 
 | Custom property | Default | Sets |
 | --- | --- | --- |
-| `--listing-filters-gap` | `1rem` | the space between the filters, and around them and the pager |
+| `--listing-filters-gap` | `1.5rem` between the filters, `1rem` around them and the pager | the space between the filters, and around them and the pager |
 | `--listing-filters-column` | `16rem` | the narrowest a filter gets before it moves to a new row; it grows into the rest |
 | `--listing-filters-search-width` | `30ch` | the width of the search |
 | `--listing-filters-radius` | `1rem` | an option's corners |
