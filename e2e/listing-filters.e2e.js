@@ -329,6 +329,24 @@ async function visit(page) {
     return { display: list.display, listStyle: list.listStyleType };
   });
   expectEqual(look, { display: 'flex', listStyle: 'none' }, 'the stylesheet reaches the options');
+  const tops = () =>
+    Promise.all(
+      ['.listing-filter:not([hidden])', '.listing-filters-search'].map((selector) =>
+        filtered.locator(selector).evaluate((node) => Math.round(node.getBoundingClientRect().top)),
+      ),
+    );
+  const [topicTop, searchTop] = await tops();
+  expectEqual(topicTop, searchTop, 'two filters share a row where there is room');
+  const wide = page.viewportSize();
+  await page.setViewportSize({ width: 400, height: wide.height });
+  const [narrowTopic, narrowSearch] = await tops();
+  expectEqual(narrowTopic < narrowSearch, true, 'the filters stack on a narrow screen');
+  const searchRow = await filtered.locator('.listing-filters-search fieldset').evaluate((fieldset) => {
+    const top = (selector) => Math.round(fieldset.querySelector(selector).getBoundingClientRect().top);
+    return top('input[type=search]') === top('button');
+  });
+  expectEqual(searchRow, true, 'the search button stays beside its box on a narrow screen');
+  await page.setViewportSize(wide);
   expectEqual(await underline(filtered.locator('.listing-pager a[rel=next]')), 'underline', 'the pager reads as a link');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/public.png`, fullPage: true });
 

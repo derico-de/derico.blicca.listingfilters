@@ -188,6 +188,7 @@ value wins:
 | Custom property | Default | Sets |
 | --- | --- | --- |
 | `--listing-filters-gap` | `1rem` | the space between the filters, and around them and the pager |
+| `--listing-filters-column` | `16rem` | the narrowest a filter gets before the next one moves to a new row |
 | `--listing-filters-radius` | `1rem` | an option's corners |
 | `--listing-filters-accent` | `--bs-primary`, then `#0b5cad` | a selected option and the search button |
 | `--listing-filters-accent-contrast` | `#fff` | the text on the accent |
