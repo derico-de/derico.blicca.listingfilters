@@ -14,7 +14,7 @@
   flex-wrap: wrap;
   align-items: flex-start;
   gap: var(--listing-filters-gap, 1.5rem);
-  margin-block-end: var(--listing-filters-gap, 1rem);
+  margin-block-end: var(--listing-filters-gap, 1.5rem);
 }
 
 .listing-filters .listing-filter {
@@ -112,7 +112,7 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  margin-block-start: var(--listing-filters-gap, 1rem);
+  margin-block-start: var(--listing-filters-gap, 1.5rem);
 }
 
 /* pat-inject's class on a public page, the core preview's state on the canvas. */

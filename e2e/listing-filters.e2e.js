@@ -358,6 +358,12 @@ async function visit(page) {
     { gap: true, search: true, facet: true },
     'the filters are 1.5rem apart, the search is 30ch wide and the other filter takes the rest',
   );
+  const margins = await filtered.evaluate((block) => {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const margin = (selector, side) => parseFloat(getComputedStyle(block.querySelector(selector))[side]) / rem;
+    return [margin('.listing-filters', 'marginBottom'), margin('.listing-pager', 'marginTop')];
+  });
+  expectEqual(margins, [1.5, 1.5], 'the filters and the pager keep 1.5rem from the results');
   const wide = page.viewportSize();
   await page.setViewportSize({ width: 400, height: wide.height });
   const [narrowTopic, narrowSearch] = await tops();
