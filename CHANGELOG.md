@@ -5,7 +5,8 @@
 - Initial release: filters on the Listing block. Visitors narrow a listing by
   tags, other properties or a text search, with options from that listing's
   own results.
-- Put the filters side by side where the listing has room for them.
+- Put the filters side by side where the listing has room for them: the
+  search is 30ch wide and the other filters share the rest.
 - Label the title field of a filter, whose placeholder read as a set value.
 - Narrow without loading the page: options, the pager and reset swap the
   results with `pat-inject`, and the search does so as you type, from the third

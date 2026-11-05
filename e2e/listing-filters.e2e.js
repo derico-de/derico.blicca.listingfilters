@@ -337,6 +337,21 @@ async function visit(page) {
     );
   const [topicTop, searchTop] = await tops();
   expectEqual(topicTop, searchTop, 'two filters share a row where there is room');
+  const widths = await filtered.locator('.listing-filters').evaluate((row) => {
+    const search = row.querySelector('.listing-filters-search');
+    const probe = document.createElement('div');
+    probe.style.width = '30ch';
+    search.append(probe);
+    const ch30 = probe.offsetWidth;
+    probe.remove();
+    const gap = parseFloat(getComputedStyle(row).columnGap);
+    const facet = row.querySelector('.listing-filter:not([hidden])');
+    return {
+      search: Math.abs(search.offsetWidth - ch30) <= 1,
+      facet: Math.abs(facet.offsetWidth + gap + search.offsetWidth - row.clientWidth) <= 1,
+    };
+  });
+  expectEqual(widths, { search: true, facet: true }, 'the search is 30ch wide and the other filter takes the rest');
   const wide = page.viewportSize();
   await page.setViewportSize({ width: 400, height: wide.height });
   const [narrowTopic, narrowSearch] = await tops();
