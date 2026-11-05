@@ -10,15 +10,23 @@
  */
 
 .listing-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--listing-filters-column, 16rem)), 1fr));
-  align-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--listing-filters-gap, 1rem);
   margin-block-end: var(--listing-filters-gap, 1rem);
 }
 
+.listing-filters .listing-filter {
+  flex: 1 1 var(--listing-filters-column, 16rem);
+}
+
+.listing-filters .listing-filters-search {
+  flex: 0 1 var(--listing-filters-search-width, 30ch);
+}
+
 .listing-filters .listing-filters-reset-region {
-  grid-column: 1 / -1;
+  flex: 1 0 100%;
 }
 
 .listing-filters .listing-filter-title,
