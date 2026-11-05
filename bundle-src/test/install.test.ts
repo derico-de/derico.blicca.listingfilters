@@ -4,8 +4,12 @@ import install from '../src/index';
 
 const coreSchema = () => ({
   title: 'Listing',
-  fieldsets: [{ id: 'default', title: 'Default', fields: ['headline', 'querystring'] }],
-  properties: { headline: { title: 'Headline' }, querystring: { title: 'Criteria', widget: 'querystring' } },
+  fieldsets: [{ id: 'default', title: 'Default', fields: ['headline', 'querystring', 'querystring.limit'] }],
+  properties: {
+    headline: { title: 'Headline' },
+    querystring: { title: 'Criteria', widget: 'querystring', showLimit: false },
+    'querystring.limit': { title: 'Maximum results', type: 'number' },
+  },
   required: [],
 });
 
@@ -30,7 +34,7 @@ describe('install', () => {
 
     expect(schema.fieldsets.map((fieldset: any) => fieldset.id)).toEqual(['default', 'filters']);
     expect(schema.fieldsets[1].fields).toEqual(['filters']);
-    expect(schema.fieldsets[0].fields).toEqual(['headline', 'batchSize', 'querystring']);
+    expect(schema.fieldsets[0].fields).toEqual(['headline', 'querystring', 'batchSize', 'querystring.limit']);
     expect(schema.properties.filters.widget).toBe('listingfilters_filters');
     expect(schema.properties.querystring.widget).toBe('querystring');
   });
@@ -48,6 +52,19 @@ describe('install', () => {
     expect(schema.fieldsets.map((fieldset: any) => fieldset.id)).toEqual(['default', 'filters']);
     expect(schema.fieldsets[0].fields).toEqual(['batchSize']);
     expect(schema.fieldsets[1].fields).toEqual(['filters']);
+  });
+
+  it('inserts results per page directly before the maximum in its fieldset', () => {
+    const shared = coreSchema();
+    shared.fieldsets = [
+      { id: 'default', title: 'Default', fields: ['headline', 'querystring'] },
+      { id: 'paging', title: 'Paging', fields: ['querystring.limit'] },
+    ];
+    const schema = install(hostConfig(shared)).blocks.blocksConfig.listing.blockSchema({});
+
+    expect(schema.fieldsets[0].fields).toEqual(['headline', 'querystring']);
+    expect(schema.fieldsets[1].fields).toEqual(['batchSize', 'querystring.limit']);
+    expect(shared.fieldsets[1].fields).toEqual(['querystring.limit']);
   });
 
   it('keeps the core block otherwise', () => {
@@ -95,7 +112,7 @@ describe('install', () => {
 
     expect(schema.fieldsets).toHaveLength(2);
     expect(shared.fieldsets).toHaveLength(1);
-    expect(shared.fieldsets[0].fields).toEqual(['headline', 'querystring']);
+    expect(shared.fieldsets[0].fields).toEqual(['headline', 'querystring', 'querystring.limit']);
     expect(shared.properties).not.toHaveProperty('filters');
   });
 

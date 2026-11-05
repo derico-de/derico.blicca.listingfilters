@@ -170,12 +170,19 @@ async function setUpFiltersInTheEditor(page) {
   expectEqual(await filtersToggle.getAttribute('aria-expanded'), 'false', 'Filters starts collapsed');
   const batchSize = sidebar.getByLabel('Results per page');
   expectEqual(await batchSize.isVisible(), true, 'results per page is visible with Filters collapsed');
+  const maximum = sidebar.getByLabel('Maximum results', { exact: true });
   const batchBounds = await batchSize.boundingBox();
-  const limitBounds = await sidebar.getByLabel('Maximum results', { exact: true }).boundingBox();
+  const limitBounds = await maximum.boundingBox();
   expectEqual(
     Boolean(batchBounds && limitBounds && batchBounds.y + batchBounds.height <= limitBounds.y),
     true,
     'results per page is rendered above maximum results',
+  );
+  expectEqual(
+    await batchSize.evaluate((input) =>
+      input.parentElement.nextElementSibling?.querySelector('input')?.name),
+    'querystring.limit',
+    'maximum results is the very next field after results per page',
   );
   if (SHOTS) {
     await batchSize.scrollIntoViewIfNeeded();
@@ -218,6 +225,7 @@ async function setUpFiltersInTheEditor(page) {
   await until(() => shownTitles(block), ['Alpha', 'Beta', 'Gamma'], 'all results fit the default page');
   expectEqual(await batchSize.getAttribute('type'), 'number', 'the batch size takes a number');
   await batchSize.fill('2');
+  await maximum.fill('3');
   await until(() => shownTitles(block), ['Alpha', 'Beta'], 'the canvas pages by the batch size');
   const editing = page.url();
   await narrowOnTheCanvas(page, block, options);
@@ -238,6 +246,8 @@ async function setUpFiltersInTheEditor(page) {
     'the setting is stored',
   );
   expectEqual(Number(stored.batchSize), 2, 'the batch size is stored');
+  expectEqual(stored.querystring.limit, 3, 'the separate maximum is stored as a number');
+  expectEqual(stored.querystring.query.length, 2, 'setting the maximum preserves the criteria');
   expectEqual(stored.filtersPreview, undefined, 'what narrowed the preview is not stored');
 }
 

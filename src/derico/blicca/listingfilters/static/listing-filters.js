@@ -316,8 +316,9 @@ function withFilters(upstream) {
       ...fieldset,
       fields: [...fieldset.fields]
     }));
-    const query = fieldsets.find(({ fields }) => fields.includes("querystring")) ?? fieldsets[0];
-    const at = query.fields.indexOf("querystring");
+    const maximum = "querystring.limit";
+    const query = fieldsets.find(({ fields }) => fields.includes(maximum)) ?? fieldsets[0];
+    const at = query.fields.indexOf(maximum);
     query.fields.splice(at === -1 ? query.fields.length : at, 0, "batchSize");
     return {
       ...schema,

@@ -20,11 +20,10 @@ export function withFilters(upstream: unknown) {
       ...fieldset,
       fields: [...fieldset.fields],
     }));
-    // Results per page pages the query's results, so it belongs next to the
-    // querystring widget (above its Maximum results), not inside the
-    // collapsed Filters fieldset.
-    const query = fieldsets.find(({ fields }) => fields.includes('querystring')) ?? fieldsets[0];
-    const at = query.fields.indexOf('querystring');
+    // The editor exposes the maximum separately from its criteria widget.
+    const maximum = 'querystring.limit';
+    const query = fieldsets.find(({ fields }) => fields.includes(maximum)) ?? fieldsets[0];
+    const at = query.fields.indexOf(maximum);
     query.fields.splice(at === -1 ? query.fields.length : at, 0, 'batchSize');
     return {
       ...schema,

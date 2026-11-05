@@ -11,5 +11,5 @@
   letter. The editor's canvas narrows the same way, without storing anything.
 - Add a **Results per page** setting, so a listing can show few results at a
   time while its filters and search still cover all of them.
-- Move **Results per page** above **Maximum results** in the default listing
-  settings, outside the collapsed **Filters** section.
+- Move **Results per page** directly above **Maximum results** in the default
+  listing settings, outside the collapsed **Filters** section.
