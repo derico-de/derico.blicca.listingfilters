@@ -228,8 +228,8 @@ pnpm build
 `e2e/` drives the add-on in a running site with playwright-core: in the
 editor, adding a Tag filter with an allow list and a text search, setting the
 results per page, narrowing the canvas, and saving; on the page, as a visitor, the options, the pager, a
-selected option, the live search and reset without a page load, the placeholder
-behind a result image held back until it loads, next to a listing without
+selected option, the live search and reset without a page load, a result
+image held back keeping its box until it loads, next to a listing without
 filters and a second filtered one. It builds its fixture in
 the site `AURORA_E2E_BASE` names and removes it again; the add-on must be
 installed there. Plone leaves `127.0.0.1` unthemed, so use a host name.
