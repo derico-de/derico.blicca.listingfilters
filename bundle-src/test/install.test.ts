@@ -29,7 +29,8 @@ describe('install', () => {
     const schema = config.blocks.blocksConfig.listing.blockSchema({ formData: {} });
 
     expect(schema.fieldsets.map((fieldset: any) => fieldset.id)).toEqual(['default', 'filters']);
-    expect(schema.fieldsets[1].fields).toEqual(['filters', 'batchSize']);
+    expect(schema.fieldsets[1].fields).toEqual(['filters']);
+    expect(schema.fieldsets[0].fields).toEqual(['headline', 'batchSize', 'querystring']);
     expect(schema.properties.filters.widget).toBe('listingfilters_filters');
     expect(schema.properties.querystring.widget).toBe('querystring');
   });
@@ -38,6 +39,15 @@ describe('install', () => {
     const schema = install(hostConfig()).blocks.blocksConfig.listing.blockSchema({ formData: {} });
 
     expect(schema.properties.batchSize).toMatchObject({ title: 'Results per page', type: 'number', minimum: 1 });
+  });
+
+  it('keeps results per page when the core schema has no fieldsets', () => {
+    const schema = install(hostConfig({ ...coreSchema(), fieldsets: [] }))
+      .blocks.blocksConfig.listing.blockSchema({ formData: {} });
+
+    expect(schema.fieldsets.map((fieldset: any) => fieldset.id)).toEqual(['default', 'filters']);
+    expect(schema.fieldsets[0].fields).toEqual(['batchSize']);
+    expect(schema.fieldsets[1].fields).toEqual(['filters']);
   });
 
   it('keeps the core block otherwise', () => {
@@ -85,6 +95,7 @@ describe('install', () => {
 
     expect(schema.fieldsets).toHaveLength(2);
     expect(shared.fieldsets).toHaveLength(1);
+    expect(shared.fieldsets[0].fields).toEqual(['headline', 'querystring']);
     expect(shared.properties).not.toHaveProperty('filters');
   });
 

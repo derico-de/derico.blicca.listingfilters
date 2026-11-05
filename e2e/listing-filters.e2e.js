@@ -1,7 +1,8 @@
 /* E2E: staff set up filters on a listing, visitors narrow it.
  *
- *  1. In the editor, the listing's Filters setting adds a Tag filter with an
- *     allow list, a text search and the results per page. The canvas narrows
+ *  1. In the editor, results per page stays visible above maximum results
+ *     with Filters collapsed. Filters adds a Tag filter with an allow list
+ *     and a text search. The canvas narrows
  *     like a public page:
  *     options, the live search from the third letter, the pager and reset
  *     all work, stay in the editor, and none of it is stored.
@@ -164,7 +165,23 @@ async function setUpFiltersInTheEditor(page) {
   await block.click();
 
   const sidebar = page.locator('#sidebar');
-  await sidebar.getByRole('button', { name: 'Filters' }).click();
+  const filtersToggle = sidebar.getByRole('button', { name: 'Filters', exact: true });
+  await filtersToggle.waitFor();
+  expectEqual(await filtersToggle.getAttribute('aria-expanded'), 'false', 'Filters starts collapsed');
+  const batchSize = sidebar.getByLabel('Results per page');
+  expectEqual(await batchSize.isVisible(), true, 'results per page is visible with Filters collapsed');
+  const batchBounds = await batchSize.boundingBox();
+  const limitBounds = await sidebar.getByLabel('Maximum results', { exact: true }).boundingBox();
+  expectEqual(
+    Boolean(batchBounds && limitBounds && batchBounds.y + batchBounds.height <= limitBounds.y),
+    true,
+    'results per page is rendered above maximum results',
+  );
+  if (SHOTS) {
+    await batchSize.scrollIntoViewIfNeeded();
+    await sidebar.screenshot({ path: `${SHOTS}/sidebar.png` });
+  }
+  await filtersToggle.click();
   const widget = sidebar.getByRole('group', { name: 'Filter the results by' });
   const add = widget.getByRole('button', { name: 'Add filter' });
   await add.waitFor({ timeout: 15000 });
@@ -199,7 +216,6 @@ async function setUpFiltersInTheEditor(page) {
   );
   expectEqual(await options.allTextContents(), [GREEN, RED], 'the canvas previews the filters');
   await until(() => shownTitles(block), ['Alpha', 'Beta', 'Gamma'], 'all results fit the default page');
-  const batchSize = sidebar.getByLabel('Results per page');
   expectEqual(await batchSize.getAttribute('type'), 'number', 'the batch size takes a number');
   await batchSize.fill('2');
   await until(() => shownTitles(block), ['Alpha', 'Beta'], 'the canvas pages by the batch size');

@@ -312,9 +312,16 @@ function withFilters(upstream) {
   return (args) => {
     const schema = typeof upstream === "function" ? upstream(args) : upstream ?? {};
     if (schema.properties?.filters) return schema;
+    const fieldsets = (schema.fieldsets?.length ? schema.fieldsets : [{ id: "default", title: "Default", fields: [] }]).map((fieldset) => ({
+      ...fieldset,
+      fields: [...fieldset.fields]
+    }));
+    const query = fieldsets.find(({ fields }) => fields.includes("querystring")) ?? fieldsets[0];
+    const at = query.fields.indexOf("querystring");
+    query.fields.splice(at === -1 ? query.fields.length : at, 0, "batchSize");
     return {
       ...schema,
-      fieldsets: [...schema.fieldsets ?? [], { id: "filters", title: "Filters", fields: ["filters", "batchSize"] }],
+      fieldsets: [...fieldsets, { id: "filters", title: "Filters", fields: ["filters"] }],
       properties: {
         ...schema.properties,
         filters: { title: "Filter the results by", widget: "listingfilters_filters" },
