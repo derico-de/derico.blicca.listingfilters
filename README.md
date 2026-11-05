@@ -34,8 +34,6 @@ the options, and a listing with no filters renders exactly as it did.
   The selection is in the URL, per block, so several listings on one page
   stay independent and a narrowed listing can be bookmarked. Without
   JavaScript the same links load the page.
-- **A placeholder behind result images** until they have loaded, so swapped
-  results don't flash empty space.
 - **A pager over the narrowed results**, with a results-per-page setting for
   the block. Filters and the search cover every page.
 - **Translated** into German.
@@ -155,9 +153,8 @@ blocks are kept in every link.
 On a public page, `pat-inject` from Plone's bundle swaps each region on its
 own, and its `history: record` keeps the URL on the current selection and page.
 `static/listing-filters-live.js` adds what it has no option for: waiting 300ms
-and for the third letter before submitting the search, keeping the keyboard on
-the option or pager link a swap replaced, and taking the placeholder from behind
-an image that has loaded.
+and for the third letter before submitting the search, and keeping the keyboard
+on the option or pager link a swap replaced.
 
 On the canvas, the add-on wraps the core block's edit component and passes the
 preview state as `filtersPreview` in the block's data. The core block's own
@@ -194,7 +191,6 @@ value wins:
 | `--listing-filters-radius` | `1rem` | an option's corners |
 | `--listing-filters-accent` | `--bs-primary`, then `#0b5cad` | a selected option and the search button |
 | `--listing-filters-accent-contrast` | `#fff` | the text on the accent |
-| `--listing-filters-image-placeholder` | 12% of the text color | the background of a result image that is still loading |
 
 While a request runs, `.listing-results` is dimmed. On a public page it has the
 class `injecting`, on the canvas an ancestor has `aria-busy="true"`.

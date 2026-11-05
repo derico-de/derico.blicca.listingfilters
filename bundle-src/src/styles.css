@@ -107,8 +107,3 @@
 [aria-busy='true'] .listing-results {
   opacity: 0.6;
 }
-
-/* Only a public page's results have the attribute, and its script ends this. */
-.listing-results[data-listing-block] img:not(.listing-image-loaded) {
-  background: var(--listing-filters-image-placeholder, color-mix(in srgb, currentColor 12%, transparent));
-}
