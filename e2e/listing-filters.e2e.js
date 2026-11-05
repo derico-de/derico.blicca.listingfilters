@@ -176,7 +176,7 @@ async function setUpFiltersInTheEditor(page) {
   await block.click();
 
   const sidebar = page.locator('#sidebar');
-  await sidebar.locator('select[name="sort_on"]').waitFor();
+  await sidebar.locator('select[name="sort_on"]').waitFor({ state: 'attached' });
   const filtersToggle = sidebar.getByRole('button', { name: 'Filters', exact: true });
   await filtersToggle.waitFor();
   expectEqual(await filtersToggle.getAttribute('aria-expanded'), 'false', 'Filters starts collapsed');
