@@ -345,13 +345,19 @@ async function visit(page) {
     const ch30 = probe.offsetWidth;
     probe.remove();
     const gap = parseFloat(getComputedStyle(row).columnGap);
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
     const facet = row.querySelector('.listing-filter:not([hidden])');
     return {
+      gap: Math.abs(gap - 1.5 * rem) <= 0.5,
       search: Math.abs(search.offsetWidth - ch30) <= 1,
       facet: Math.abs(facet.offsetWidth + gap + search.offsetWidth - row.clientWidth) <= 1,
     };
   });
-  expectEqual(widths, { search: true, facet: true }, 'the search is 30ch wide and the other filter takes the rest');
+  expectEqual(
+    widths,
+    { gap: true, search: true, facet: true },
+    'the filters are 1.5rem apart, the search is 30ch wide and the other filter takes the rest',
+  );
   const wide = page.viewportSize();
   await page.setViewportSize({ width: 400, height: wide.height });
   const [narrowTopic, narrowSearch] = await tops();
