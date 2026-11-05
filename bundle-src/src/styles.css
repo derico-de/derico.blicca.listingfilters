@@ -2,7 +2,8 @@
  * One stylesheet for the public listing and the editor's preview. The build
  * wraps it in the blocks' scope (build-plugins/scope-wrap.ts).
  *
- * Every rule descends from `.listing-filters` or `.listing-pager`. Every
+ * Every rule descends from `.listing-filters`, `.listing-pager` or
+ * `.listing-results`. Every
  * `--listing-filters-*` axis is spelled `var(--x, literal)` where it is used
  * and declared nowhere, so a theme's inherited value wins. README.md lists
  * them.
@@ -105,4 +106,9 @@
 .listing-results.injecting,
 [aria-busy='true'] .listing-results {
   opacity: 0.6;
+}
+
+/* Only a public page's results have the attribute, and its script ends this. */
+.listing-results[data-listing-block] img:not(.listing-image-loaded) {
+  background: var(--listing-filters-image-placeholder, color-mix(in srgb, currentColor 12%, transparent));
 }

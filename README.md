@@ -34,6 +34,8 @@ the options, and a listing with no filters renders exactly as it did.
   The selection is in the URL, per block, so several listings on one page
   stay independent and a narrowed listing can be bookmarked. Without
   JavaScript the same links load the page.
+- **A placeholder behind result images** until they have loaded, so swapped
+  results don't flash empty space.
 - **A pager over the narrowed results**, with a results-per-page setting for
   the block. Filters and the search cover every page.
 - **Translated** into German.
@@ -151,9 +153,11 @@ Selections travel as `<block id>.<property>` parameters. Parameters of other
 blocks are kept in every link.
 
 On a public page, `pat-inject` from Plone's bundle swaps each region on its
-own. `static/listing-filters-live.js` adds what it has no option for: waiting
-300ms and for the third letter before submitting the search, and keeping the
-keyboard on the option or pager link a swap replaced.
+own, and its `history: record` keeps the URL on the current selection and page.
+`static/listing-filters-live.js` adds what it has no option for: waiting 300ms
+and for the third letter before submitting the search, keeping the keyboard on
+the option or pager link a swap replaced, and taking the placeholder from behind
+an image that has loaded.
 
 On the canvas, the add-on wraps the core block's edit component and passes the
 preview state as `filtersPreview` in the block's data. The core block's own
@@ -179,7 +183,8 @@ stored blocks, which the core block ignores, so reinstalling brings them back.
 ## Theming
 
 The stylesheet is `@scope`-wrapped to the editor and the public blocks view.
-Its rules descend from `.listing-filters` or `.listing-pager`. A theme sets
+Its rules descend from `.listing-filters`, `.listing-pager` or
+`.listing-results`. A theme sets
 these custom properties, none of which the add-on declares, so an inherited
 value wins:
 
@@ -189,6 +194,7 @@ value wins:
 | `--listing-filters-radius` | `1rem` | an option's corners |
 | `--listing-filters-accent` | `--bs-primary`, then `#0b5cad` | a selected option and the search button |
 | `--listing-filters-accent-contrast` | `#fff` | the text on the accent |
+| `--listing-filters-image-placeholder` | 12% of the text color | the background of a result image that is still loading |
 
 While a request runs, `.listing-results` is dimmed. On a public page it has the
 class `injecting`, on the canvas an ancestor has `aria-busy="true"`.
@@ -226,8 +232,9 @@ pnpm build
 `e2e/` drives the add-on in a running site with playwright-core: in the
 editor, adding a Tag filter with an allow list and a text search, setting the
 results per page, narrowing the canvas, and saving; on the page, as a visitor, the options, the pager, a
-selected option, the live search and reset without a page load, next to a
-listing without filters and a second filtered one. It builds its fixture in
+selected option, the live search and reset without a page load, the placeholder
+behind a result image held back until it loads, next to a listing without
+filters and a second filtered one. It builds its fixture in
 the site `AURORA_E2E_BASE` names and removes it again; the add-on must be
 installed there. Plone leaves `127.0.0.1` unthemed, so use a host name.
 

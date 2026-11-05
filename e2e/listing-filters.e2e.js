@@ -13,8 +13,11 @@
  *  4. The search narrows from the third letter while the field keeps its
  *     focus, and reset brings all results back.
  *  5. The pager walks the results.
- *  6. The URL holds the selection, and Back returns to the last one.
+ *  6. The URL holds the selection and the page, and Back returns to the last
+ *     one.
  *  7. The listing without filters on the same page is left alone.
+ *  8. A result image shows a placeholder of its own size until it has loaded,
+ *     on the page's first load and after a swap.
  *
  * Prerequisites: a running Plone site with derico.blicca.listingfilters
  * installed. Configure via environment:
@@ -50,10 +53,18 @@ const BLUE = 'e2e-blue';
 const GREEN = 'e2e-green';
 const ELSEWHERE_TAG = 'e2e-elsewhere';
 
+// A transparent pixel: a placeholder left behind it would show.
+const IMAGE = {
+  data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  encoding: 'base64',
+  filename: 'pixel.png',
+  'content-type': 'image/png',
+};
+
 const ITEMS = [
   { id: 'alpha', title: 'Alpha', subjects: [RED, BLUE], description: 'First' },
   { id: 'beta', title: 'Beta', subjects: [RED], description: 'Second' },
-  { id: 'gamma', title: 'Gamma', subjects: [GREEN], description: 'Holds the needle' },
+  { id: 'gamma', title: 'Gamma', subjects: [GREEN], description: 'Holds the needle', image: IMAGE },
 ];
 
 async function api(method, path, body) {
@@ -312,6 +323,7 @@ async function visit(page) {
 
   await swapped(() => filtered.locator('.listing-pager a[rel=next]').click());
   expectEqual(await shownTitles(filtered), ['Gamma'], 'the pager shows the next page');
+  expectEqual(new URL(page.url()).searchParams.get(`${BLOCK_ID}.b_start`), '2', 'the page is in the URL');
   expectEqual(await shownTitles(plain), ['Alpha', 'Beta'], 'the pager leaves the listing without filters alone');
   await swapped(() => filtered.locator('.listing-pager a[rel=prev]').click());
   expectEqual(await shownTitles(filtered), ['Alpha', 'Beta'], 'the pager goes back');
@@ -373,6 +385,50 @@ async function visit(page) {
   expectEqual(await search.inputValue(), 'needle', 'the URL fills the field');
 }
 
+const placeholderOf = (image) =>
+  image.evaluate((node) => ({
+    shown: getComputedStyle(node).backgroundColor !== 'rgba(0, 0, 0, 0)',
+    sized: node.offsetHeight > 0 && node.offsetWidth > 0,
+  }));
+
+/* Holds the images back, as a slow connection would, until `release`. */
+async function holdImages(page) {
+  let release;
+  const released = new Promise((resolve) => { release = resolve; });
+  await page.route(/@@images/, async (route) => {
+    await released;
+    await route.continue();
+  });
+  return release;
+}
+
+async function placeholderUntilLoaded(page, image, when) {
+  const release = await holdImages(page);
+  await when();
+  await image.waitFor();
+  expectEqual(await placeholderOf(image), { shown: true, sized: true }, 'a pending image shows a placeholder of its size');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/pending-image.png`, fullPage: true });
+  release();
+  await page.waitForFunction(
+    (node) => node.classList.contains('listing-image-loaded'),
+    await image.elementHandle(),
+    { timeout: 8000 },
+  );
+  expectEqual(await placeholderOf(image), { shown: false, sized: true }, 'a loaded image shows none behind it');
+  await page.unroute(/@@images/);
+}
+
+async function visitWithSlowImages(page) {
+  const filtered = page.locator('.listing', { has: page.locator('.listing-filters') });
+  const image = filtered.locator('.listing-results .item img');
+  const url = `${BASE}/${FOLDER_ID}/${PAGE_ID}`;
+  await placeholderUntilLoaded(page, image, () => page.goto(`${url}?${BLOCK_ID}.Subject=${GREEN}`, { waitUntil: 'domcontentloaded' }));
+
+  await page.goto(url, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.jQuery?.(document.querySelector('a.pat-inject')).data('pat-inject'));
+  await placeholderUntilLoaded(page, image, () => filtered.locator('.listing-filter-options a').filter({ hasText: GREEN }).click());
+}
+
 /* A second listing with filters: narrowing one keeps the other's selection,
  * though pat-inject read that listing's URLs when the page loaded. */
 async function visitTwoListings(page) {
@@ -425,6 +481,7 @@ async function addSecondFilteredListing() {
     const viewport = { width: 1400, height: 1000 };
     await setUpFiltersInTheEditor(await newPage(await browser.newContext({ viewport })));
     await visit(await newPage(await browser.newContext({ viewport })));
+    await visitWithSlowImages(await newPage(await browser.newContext({ viewport })));
     await addSecondFilteredListing();
     await visitTwoListings(await newPage(await browser.newContext({ viewport })));
     if (pageErrors.length) fail(`uncaught page errors:\n${pageErrors.join('\n')}`);
