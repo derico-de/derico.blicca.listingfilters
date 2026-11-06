@@ -5,8 +5,6 @@ function liveTerm(typed) {
 }
 const SEARCH_FIELD = ".listing-filters-search input[type=search]";
 const DELAY = 300;
-const RESULT_IMAGE = ".listing-results[data-listing-block] img";
-const IMAGE_LOADED = "listing-image-loaded";
 const sentTerms = /* @__PURE__ */ new WeakMap();
 const timers = /* @__PURE__ */ new WeakMap();
 let focusWatcher;
@@ -129,22 +127,11 @@ function onType(event) {
   if (event.isComposing) return;
   searchWhenSettled(field.form, field);
 }
-function onImageLoad(event) {
-  const image = event.target;
-  if (image instanceof Element && image.matches(RESULT_IMAGE)) image.classList.add(IMAGE_LOADED);
-}
-function markImagesAlreadyLoaded(document2) {
-  for (const image of document2.querySelectorAll(RESULT_IMAGE)) {
-    if (image.complete && image.naturalWidth) image.classList.add(IMAGE_LOADED);
-  }
-}
 function watchListings(document2) {
   document2.addEventListener("click", onClick, true);
   document2.addEventListener("submit", onSubmit, true);
   document2.addEventListener("input", onType);
   document2.addEventListener("compositionend", onType);
-  document2.addEventListener("load", onImageLoad, true);
-  markImagesAlreadyLoaded(document2);
 }
 watchListings(document);
 //# sourceMappingURL=listing-filters-live.js.map

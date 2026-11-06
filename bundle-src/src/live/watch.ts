@@ -2,8 +2,6 @@ import { liveTerm } from '../live-term';
 
 const SEARCH_FIELD = '.listing-filters-search input[type=search]';
 const DELAY = 300;
-const RESULT_IMAGE = '.listing-results[data-listing-block] img';
-const IMAGE_LOADED = 'listing-image-loaded';
 
 const sentTerms = new WeakMap<HTMLFormElement, string>();
 const timers = new WeakMap<HTMLFormElement, ReturnType<typeof setTimeout>>();
@@ -149,24 +147,10 @@ function onType(event: Event) {
   searchWhenSettled(field.form, field);
 }
 
-/** `load` doesn't bubble: this listens in the capture phase. */
-function onImageLoad(event: Event) {
-  const image = event.target;
-  if (image instanceof Element && image.matches(RESULT_IMAGE)) image.classList.add(IMAGE_LOADED);
-}
-
-function markImagesAlreadyLoaded(document: Document) {
-  for (const image of document.querySelectorAll<HTMLImageElement>(RESULT_IMAGE)) {
-    if (image.complete && image.naturalWidth) image.classList.add(IMAGE_LOADED);
-  }
-}
-
 export function watchListings(document: Document) {
   // Capturing, to run before pat-inject's own listeners on the element.
   document.addEventListener('click', onClick, true);
   document.addEventListener('submit', onSubmit, true);
   document.addEventListener('input', onType);
   document.addEventListener('compositionend', onType);
-  document.addEventListener('load', onImageLoad, true);
-  markImagesAlreadyLoaded(document);
 }

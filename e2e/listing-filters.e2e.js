@@ -16,8 +16,8 @@
  *  6. The URL holds the selection and the page, and Back returns to the last
  *     one.
  *  7. The listing without filters on the same page is left alone.
- *  8. A result image shows a placeholder of its own size until it has loaded,
- *     on the page's first load and after a swap.
+ *  8. A result image takes its box before it has loaded, with no background,
+ *     and keeps it once loaded, on the page's first load and after a swap.
  *
  * Prerequisites: a running Plone site with derico.blicca.listingfilters
  * installed. Configure via environment:
@@ -53,7 +53,7 @@ const BLUE = 'e2e-blue';
 const GREEN = 'e2e-green';
 const ELSEWHERE_TAG = 'e2e-elsewhere';
 
-// A transparent pixel: a placeholder left behind it would show.
+// A transparent pixel: a background behind it would show.
 const IMAGE = {
   data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
   encoding: 'base64',
@@ -176,7 +176,7 @@ async function setUpFiltersInTheEditor(page) {
   await block.click();
 
   const sidebar = page.locator('#sidebar');
-  await sidebar.locator('select[name="sort_on"]').waitFor();
+  await sidebar.locator('select[name="sort_on"]').waitFor({ state: 'attached' });
   const filtersToggle = sidebar.getByRole('button', { name: 'Filters', exact: true });
   await filtersToggle.waitFor();
   expectEqual(await filtersToggle.getAttribute('aria-expanded'), 'false', 'Filters starts collapsed');
@@ -329,6 +329,51 @@ async function visit(page) {
     return { display: list.display, listStyle: list.listStyleType };
   });
   expectEqual(look, { display: 'flex', listStyle: 'none' }, 'the stylesheet reaches the options');
+  const tops = () =>
+    Promise.all(
+      ['.listing-filter:not([hidden])', '.listing-filters-search'].map((selector) =>
+        filtered.locator(selector).evaluate((node) => Math.round(node.getBoundingClientRect().top)),
+      ),
+    );
+  const [topicTop, searchTop] = await tops();
+  expectEqual(topicTop, searchTop, 'two filters share a row where there is room');
+  const widths = await filtered.locator('.listing-filters').evaluate((row) => {
+    const search = row.querySelector('.listing-filters-search');
+    const probe = document.createElement('div');
+    probe.style.width = '30ch';
+    search.append(probe);
+    const ch30 = probe.offsetWidth;
+    probe.remove();
+    const gap = parseFloat(getComputedStyle(row).columnGap);
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const facet = row.querySelector('.listing-filter:not([hidden])');
+    return {
+      gap: Math.abs(gap - 1.5 * rem) <= 0.5,
+      search: Math.abs(search.offsetWidth - ch30) <= 1,
+      facet: Math.abs(facet.offsetWidth + gap + search.offsetWidth - row.clientWidth) <= 1,
+    };
+  });
+  expectEqual(
+    widths,
+    { gap: true, search: true, facet: true },
+    'the filters are 1.5rem apart, the search is 30ch wide and the other filter takes the rest',
+  );
+  const margins = await filtered.evaluate((block) => {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const margin = (selector, side) => parseFloat(getComputedStyle(block.querySelector(selector))[side]) / rem;
+    return [margin('.listing-filters', 'marginBottom'), margin('.listing-pager', 'marginTop')];
+  });
+  expectEqual(margins, [1.5, 1.5], 'the filters and the pager keep 1.5rem from the results');
+  const wide = page.viewportSize();
+  await page.setViewportSize({ width: 400, height: wide.height });
+  const [narrowTopic, narrowSearch] = await tops();
+  expectEqual(narrowTopic < narrowSearch, true, 'the filters stack on a narrow screen');
+  const searchRow = await filtered.locator('.listing-filters-search fieldset').evaluate((fieldset) => {
+    const top = (selector) => Math.round(fieldset.querySelector(selector).getBoundingClientRect().top);
+    return top('input[type=search]') === top('button');
+  });
+  expectEqual(searchRow, true, 'the search button stays beside its box on a narrow screen');
+  await page.setViewportSize(wide);
   expectEqual(await underline(filtered.locator('.listing-pager a[rel=next]')), 'underline', 'the pager reads as a link');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/public.png`, fullPage: true });
 
@@ -396,10 +441,11 @@ async function visit(page) {
   expectEqual(await search.inputValue(), 'needle', 'the URL fills the field');
 }
 
-const placeholderOf = (image) =>
+const boxOf = (image) =>
   image.evaluate((node) => ({
-    shown: getComputedStyle(node).backgroundColor !== 'rgba(0, 0, 0, 0)',
-    sized: node.offsetHeight > 0 && node.offsetWidth > 0,
+    background: getComputedStyle(node).backgroundColor,
+    width: node.offsetWidth,
+    height: node.offsetHeight,
   }));
 
 /* Holds the images back, as a slow connection would, until `release`. */
@@ -413,19 +459,20 @@ async function holdImages(page) {
   return release;
 }
 
-async function placeholderUntilLoaded(page, image, when) {
+async function boxKeptUntilLoaded(page, image, when) {
   const release = await holdImages(page);
   await when();
   await image.waitFor();
-  expectEqual(await placeholderOf(image), { shown: true, sized: true }, 'a pending image shows a placeholder of its size');
+  const pending = await boxOf(image);
+  expectEqual(
+    { background: pending.background, sized: pending.width > 0 && Math.abs(pending.height - (pending.width * 9) / 16) <= 1 },
+    { background: 'rgba(0, 0, 0, 0)', sized: true },
+    'a pending image takes its 16:9 box, with no background',
+  );
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/pending-image.png`, fullPage: true });
   release();
-  await page.waitForFunction(
-    (node) => node.classList.contains('listing-image-loaded'),
-    await image.elementHandle(),
-    { timeout: 8000 },
-  );
-  expectEqual(await placeholderOf(image), { shown: false, sized: true }, 'a loaded image shows none behind it');
+  await page.waitForFunction((node) => node.complete && node.naturalWidth, await image.elementHandle(), { timeout: 8000 });
+  expectEqual(await boxOf(image), pending, 'a loaded image keeps its box');
   await page.unroute(/@@images/);
 }
 
@@ -433,11 +480,11 @@ async function visitWithSlowImages(page) {
   const filtered = page.locator('.listing', { has: page.locator('.listing-filters') });
   const image = filtered.locator('.listing-results .item img');
   const url = `${BASE}/${FOLDER_ID}/${PAGE_ID}`;
-  await placeholderUntilLoaded(page, image, () => page.goto(`${url}?${BLOCK_ID}.Subject=${GREEN}`, { waitUntil: 'domcontentloaded' }));
+  await boxKeptUntilLoaded(page, image, () => page.goto(`${url}?${BLOCK_ID}.Subject=${GREEN}`, { waitUntil: 'domcontentloaded' }));
 
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForFunction(() => window.jQuery?.(document.querySelector('a.pat-inject')).data('pat-inject'));
-  await placeholderUntilLoaded(page, image, () => filtered.locator('.listing-filter-options a').filter({ hasText: GREEN }).click());
+  await boxKeptUntilLoaded(page, image, () => filtered.locator('.listing-filter-options a').filter({ hasText: GREEN }).click());
 }
 
 /* A second listing with filters: narrowing one keeps the other's selection,
