@@ -190,6 +190,21 @@ class TestBaseResults(ListingCase):
         assert self.options(block, "Subject") == ["cooking"]
 
 
+class TestResultLinks(ListingCase):
+    @pytest.mark.parametrize("filters", [(), (SUBJECT_FILTER,)])
+    @pytest.mark.parametrize("variation", ["default", "summary", "grid"])
+    def test_images_link_to_the_view_and_pages_keep_their_url(self, filters, variation):
+        image = api.content.create(container=self.base, type="Image", id="photo", title="Photo")
+        data = {**listing(*filters), "variation": variation}
+        block = self.render(data)
+        links = {
+            link.text_content(): link.get("href")
+            for link in block.xpath('.//div[@class="listing-items"]//article//a')
+        }
+        assert links["Photo"] == f"/plone/base/{image.getId()}/view"
+        assert links["Cooking page"] == "/plone/base/cooking-page"
+
+
 class TestVisibility(ListingCase):
     def test_a_visitor_never_sees_what_they_may_not_see(self):
         self.render(listing(SUBJECT_FILTER))

@@ -2,6 +2,9 @@
 
 ## 1.0.0a1 (unreleased)
 
+- Image results link to `/view` instead of the raw image in filtered and
+  unfiltered listings, through the shared Aurora listing-item renderer.
+
 - Initial release: filters on the Listing block. Visitors narrow a listing by
   tags, other properties or a text search, with options from that listing's
   own results.
