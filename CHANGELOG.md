@@ -9,7 +9,15 @@
   tags, other properties or a text search, with options from that listing's
   own results.
 - Put the filters side by side where the listing has room for them: the
-  search is 30ch wide and the other filters share the rest.
+  search is 30ch wide and the other filters share the rest. Themes can set
+  the search width with `--listing-filters-search-width`.
+- Space the filters 1.5rem apart and keep the filters and pager 1.5rem from
+  the results.
+- Leave a listing without an edit component on its view instead of wrapping
+  a missing component, so installing the npm package in Aurora does not
+  break the editor.
+- Keep compiled CSS and JavaScript out of Git diffs; the generated files
+  remain tracked and ship with the package.
 - Label the title field of a filter, whose placeholder read as a set value.
 - Narrow without loading the page: options, the pager and reset swap the
   results with `pat-inject`, and the search does so as you type, from the third
