@@ -1,6 +1,6 @@
 [project]
 name = "derico.blicca.listingfilters"
-version = "1.0.0a1"
+version = "1.0.0a2.dev0"
 description = "Listing filters for Plone Blicca: visitors narrow a listing by tags, other properties or a text search, with options from that listing's own results"
 readme = "README.md"
 requires-python = ">=3.11"
