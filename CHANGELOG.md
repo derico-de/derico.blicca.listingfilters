@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0a1 (unreleased)
+## 1.0.0a1 (2026-11-09)
 
 - Image results link to `/view` instead of the raw image in filtered and
   unfiltered listings, through the shared Aurora listing-item renderer.
