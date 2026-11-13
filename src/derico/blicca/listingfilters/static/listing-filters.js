@@ -1,3 +1,4 @@
+import { useTranslation, getI18n } from "react-i18next";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { useState, useRef, useEffect, useId } from "react";
 import config from "@plone/registry";
@@ -118,7 +119,6 @@ function withFiltersPreview(CoreEdit) {
   };
 }
 const TEXT_SEARCH = "SearchableText";
-const TEXT_SEARCH_PROPERTY = { field: TEXT_SEARCH, title: "Text search", values: [] };
 const NOT_A_PROPERTY = ["show_inactive"];
 function isFilterable(field, index) {
   if (index.enabled === false || NOT_A_PROPERTY.includes(field)) return false;
@@ -149,6 +149,7 @@ function querystringUrl() {
   return root ? `${root}/@querystring` : null;
 }
 function useFilterableProperties() {
+  const { t } = useTranslation();
   const [fetched, setFetched] = useState(void 0);
   useEffect(() => {
     const url = querystringUrl();
@@ -165,7 +166,10 @@ function useFilterableProperties() {
     };
   }, []);
   return {
-    properties: [...fetched ?? [], TEXT_SEARCH_PROPERTY],
+    properties: [
+      ...fetched ?? [],
+      { field: TEXT_SEARCH, title: t("listingfilters.textSearch"), values: [] }
+    ],
     status: fetched === void 0 ? "loading" : fetched === null ? "failed" : "ready"
   };
 }
@@ -196,16 +200,16 @@ function moved(items, from, to) {
   return next;
 }
 function ItemActions({
-  subject,
+  labels,
   index,
   count,
   onMove,
   onRemove
 }) {
   return /* @__PURE__ */ jsxs("div", { className: "aurora-group-actions", children: [
-    /* @__PURE__ */ jsx("button", { type: "button", className: "aurora-group-action", "aria-label": `Move ${subject} up`, disabled: index === 0, onClick: () => onMove(index - 1), children: /* @__PURE__ */ jsx(Icon, { name: "up" }) }),
-    /* @__PURE__ */ jsx("button", { type: "button", className: "aurora-group-action", "aria-label": `Move ${subject} down`, disabled: index === count - 1, onClick: () => onMove(index + 1), children: /* @__PURE__ */ jsx(Icon, { name: "down" }) }),
-    /* @__PURE__ */ jsx("button", { type: "button", className: "aurora-group-action aurora-group-action-remove", "aria-label": `Remove ${subject}`, onClick: onRemove, children: /* @__PURE__ */ jsx(Icon, { name: "remove" }) })
+    /* @__PURE__ */ jsx("button", { type: "button", className: "aurora-group-action", "aria-label": labels.up, disabled: index === 0, onClick: () => onMove(index - 1), children: /* @__PURE__ */ jsx(Icon, { name: "up" }) }),
+    /* @__PURE__ */ jsx("button", { type: "button", className: "aurora-group-action", "aria-label": labels.down, disabled: index === count - 1, onClick: () => onMove(index + 1), children: /* @__PURE__ */ jsx(Icon, { name: "down" }) }),
+    /* @__PURE__ */ jsx("button", { type: "button", className: "aurora-group-action aurora-group-action-remove", "aria-label": labels.remove, onClick: onRemove, children: /* @__PURE__ */ jsx(Icon, { name: "remove" }) })
   ] });
 }
 function AllowList({
@@ -214,11 +218,12 @@ function AllowList({
   allowList,
   onChange
 }) {
+  const { t } = useTranslation();
   const values = property?.values ?? [];
   const titles = new Map(values);
   const unchosen = values.filter(([value]) => !allowList.includes(value));
   return /* @__PURE__ */ jsxs("div", { className: "aurora-group-field", children: [
-    /* @__PURE__ */ jsx("span", { className: labelClass, children: "Allowed values" }),
+    /* @__PURE__ */ jsx("span", { className: labelClass, children: t("listingfilters.allowedValues") }),
     allowList.length ? /* @__PURE__ */ jsx("ul", { className: "listing-filters-widget-values", children: allowList.map((value, index) => {
       const title = titles.get(value) ?? value;
       return /* @__PURE__ */ jsxs("li", { className: "listing-filters-widget-value", children: [
@@ -226,7 +231,11 @@ function AllowList({
         /* @__PURE__ */ jsx(
           ItemActions,
           {
-            subject: title,
+            labels: {
+              up: t("listingfilters.moveValueUp", { value: title }),
+              down: t("listingfilters.moveValueDown", { value: title }),
+              remove: t("listingfilters.removeValue", { value: title })
+            },
             index,
             count: allowList.length,
             onMove: (to) => onChange(moved(allowList, index, to)),
@@ -238,22 +247,23 @@ function AllowList({
     /* @__PURE__ */ jsxs(
       "select",
       {
-        "aria-label": `Add an allowed value to filter ${position}`,
+        "aria-label": t("listingfilters.addValueToFilter", { position }),
         className: controlClass,
         value: "",
         disabled: !unchosen.length,
         onChange: (event) => onChange([...allowList, event.target.value]),
         children: [
-          /* @__PURE__ */ jsx("option", { value: "", disabled: true, children: "Add value…" }),
+          /* @__PURE__ */ jsx("option", { value: "", disabled: true, children: t("listingfilters.addValue") }),
           unchosen.map(([value, title]) => /* @__PURE__ */ jsx("option", { value, children: title }, value))
         ]
       }
     ),
-    allowList.length ? null : /* @__PURE__ */ jsx("p", { className: noteClass, children: "With none chosen, every value found in the results is offered." })
+    allowList.length ? null : /* @__PURE__ */ jsx("p", { className: noteClass, children: t("listingfilters.noValuesChosen") })
   ] });
 }
 function ListingFiltersWidget(props) {
   const { label, description, className, onChange } = props;
+  const { t } = useTranslation();
   const widgetId = useId();
   const labelId = `${widgetId}-label`;
   const { properties, status } = useFilterableProperties();
@@ -282,14 +292,15 @@ function ListingFiltersWidget(props) {
                 "aria-labelledby": `${filterId}-name`,
                 children: [
                   /* @__PURE__ */ jsxs("div", { className: "aurora-group-head", children: [
-                    /* @__PURE__ */ jsxs("span", { id: `${filterId}-name`, className: "aurora-group-title", children: [
-                      "Filter ",
-                      position
-                    ] }),
+                    /* @__PURE__ */ jsx("span", { id: `${filterId}-name`, className: "aurora-group-title", children: t("listingfilters.filter", { position }) }),
                     /* @__PURE__ */ jsx(
                       ItemActions,
                       {
-                        subject: `filter ${position}`,
+                        labels: {
+                          up: t("listingfilters.moveFilterUp", { position }),
+                          down: t("listingfilters.moveFilterDown", { position }),
+                          remove: t("listingfilters.removeFilter", { position })
+                        },
                         index,
                         count: filters.length,
                         onMove: (to) => update(moved(filters, index, to)),
@@ -298,12 +309,12 @@ function ListingFiltersWidget(props) {
                     )
                   ] }),
                   /* @__PURE__ */ jsxs("div", { className: "aurora-group-field", children: [
-                    /* @__PURE__ */ jsx("label", { htmlFor: `${filterId}-property`, className: labelClass, children: "Property" }),
+                    /* @__PURE__ */ jsx("label", { htmlFor: `${filterId}-property`, className: labelClass, children: t("listingfilters.property") }),
                     /* @__PURE__ */ jsxs(
                       "select",
                       {
                         id: `${filterId}-property`,
-                        "aria-label": `Filter ${position} property`,
+                        "aria-label": t("listingfilters.filterProperty", { position }),
                         className: controlClass,
                         value: filter.field,
                         onChange: (event) => updateRow(index, { field: event.target.value, allowList: [] }),
@@ -315,13 +326,13 @@ function ListingFiltersWidget(props) {
                     )
                   ] }),
                   /* @__PURE__ */ jsxs("div", { className: "aurora-group-field", children: [
-                    /* @__PURE__ */ jsx("label", { htmlFor: `${filterId}-title`, className: labelClass, children: "Title" }),
+                    /* @__PURE__ */ jsx("label", { htmlFor: `${filterId}-title`, className: labelClass, children: t("listingfilters.title") }),
                     /* @__PURE__ */ jsx(
                       "input",
                       {
                         id: `${filterId}-title`,
                         type: "text",
-                        "aria-label": `Filter ${position} title`,
+                        "aria-label": t("listingfilters.filterTitle", { position }),
                         className: controlClass,
                         placeholder: property?.title ?? filter.field,
                         value: filter.title,
@@ -343,7 +354,7 @@ function ListingFiltersWidget(props) {
               `${filter.field}:${index}`
             );
           }),
-          status === "failed" ? /* @__PURE__ */ jsx("p", { role: "status", className: noteClass, children: "The properties to filter by could not be loaded." }) : null,
+          status === "failed" ? /* @__PURE__ */ jsx("p", { role: "status", className: noteClass, children: t("listingfilters.propertiesNotLoaded") }) : null,
           /* @__PURE__ */ jsxs(
             "button",
             {
@@ -353,7 +364,7 @@ function ListingFiltersWidget(props) {
               onClick: () => update([...filters, { field: unused[0].field, title: "", allowList: [] }]),
               children: [
                 /* @__PURE__ */ jsx(Icon, { name: "add" }),
-                "Add filter"
+                t("listingfilters.addFilter")
               ]
             }
           )
@@ -367,11 +378,21 @@ function registerListingFiltersWidgets(config2) {
   config2.registerWidget({ key: "widget", definition: { listingfilters_filters: ListingFiltersWidget } });
   return config2;
 }
+const listingfilters$1 = { "settings": "Standard", "filters": "Filter", "filterBy": "Ergebnisse filtern nach", "batchSize": "Ergebnisse pro Seite", "batchSizeHint": "Filter und Suche erfassen alle Seiten. Die maximale Anzahl an Ergebnissen begrenzt weiterhin die gesamte Auflistung.", "filter": "Filter {{position}}", "filterProperty": "Eigenschaft von Filter {{position}}", "filterTitle": "Titel von Filter {{position}}", "moveFilterUp": "Filter {{position}} nach oben verschieben", "moveFilterDown": "Filter {{position}} nach unten verschieben", "removeFilter": "Filter {{position}} entfernen", "property": "Eigenschaft", "title": "Titel", "textSearch": "Textsuche", "allowedValues": "Erlaubte Werte", "moveValueUp": "{{value}} nach oben verschieben", "moveValueDown": "{{value}} nach unten verschieben", "removeValue": "{{value}} entfernen", "addValue": "Wert hinzufügen…", "addValueToFilter": "Erlaubten Wert zu Filter {{position}} hinzufügen", "noValuesChosen": "Ist keiner gewählt, werden alle Werte angeboten, die in den Ergebnissen vorkommen.", "propertiesNotLoaded": "Die Eigenschaften zum Filtern konnten nicht geladen werden.", "addFilter": "Filter hinzufügen" };
+const de = {
+  listingfilters: listingfilters$1
+};
+const listingfilters = { "settings": "Default", "filters": "Filters", "filterBy": "Filter the results by", "batchSize": "Results per page", "batchSizeHint": "Filters and the search cover every page. Maximum results still limits the whole listing.", "filter": "Filter {{position}}", "filterProperty": "Filter {{position}} property", "filterTitle": "Filter {{position}} title", "moveFilterUp": "Move filter {{position}} up", "moveFilterDown": "Move filter {{position}} down", "removeFilter": "Remove filter {{position}}", "property": "Property", "title": "Title", "textSearch": "Text search", "allowedValues": "Allowed values", "moveValueUp": "Move {{value}} up", "moveValueDown": "Move {{value}} down", "removeValue": "Remove {{value}}", "addValue": "Add value…", "addValueToFilter": "Add an allowed value to filter {{position}}", "noValuesChosen": "With none chosen, every value found in the results is offered.", "propertiesNotLoaded": "The properties to filter by could not be loaded.", "addFilter": "Add filter" };
+const en = {
+  listingfilters
+};
+const locales = { de, en };
 function withFilters(upstream) {
   return (args) => {
     const schema = typeof upstream === "function" ? upstream(args) : upstream ?? {};
     if (schema.properties?.filters) return schema;
-    const fieldsets = (schema.fieldsets?.length ? schema.fieldsets : [{ id: "default", title: "Default", fields: [] }]).map((fieldset) => ({
+    const { t } = getI18n();
+    const fieldsets = (schema.fieldsets?.length ? schema.fieldsets : [{ id: "default", title: t("listingfilters.settings"), fields: [] }]).map((fieldset) => ({
       ...fieldset,
       fields: [...fieldset.fields]
     }));
@@ -381,13 +402,16 @@ function withFilters(upstream) {
     query.fields.splice(at === -1 ? query.fields.length : at, 0, "batchSize");
     return {
       ...schema,
-      fieldsets: [...fieldsets, { id: "filters", title: "Filters", fields: ["filters"] }],
+      fieldsets: [
+        ...fieldsets,
+        { id: "filters", title: t("listingfilters.filters"), fields: ["filters"] }
+      ],
       properties: {
         ...schema.properties,
-        filters: { title: "Filter the results by", widget: "listingfilters_filters" },
+        filters: { title: t("listingfilters.filterBy"), widget: "listingfilters_filters" },
         batchSize: {
-          title: "Results per page",
-          description: "Filters and the search cover every page. Maximum results still limits the whole listing.",
+          title: t("listingfilters.batchSize"),
+          description: t("listingfilters.batchSizeHint"),
           placeholder: "25",
           type: "number",
           minimum: 1
@@ -413,6 +437,7 @@ function install(config2) {
 }
 export {
   install as default,
+  locales,
   withFilters
 };
 //# sourceMappingURL=listing-filters.js.map

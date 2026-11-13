@@ -1,6 +1,10 @@
+import { getI18n } from 'react-i18next';
+
 import { withFiltersPreview } from './preview';
 import { registerListingFiltersWidgets } from './widgets';
 import './styles.css';
+
+export { locales } from './locales';
 
 type Schema = {
   fieldsets?: Array<{ id: string; title: string; fields: string[] }>;
@@ -13,9 +17,10 @@ export function withFilters(upstream: unknown) {
     const schema: Schema =
       typeof upstream === 'function' ? upstream(args) : ((upstream ?? {}) as Schema);
     if (schema.properties?.filters) return schema;
+    const { t } = getI18n();
     const fieldsets = (schema.fieldsets?.length
       ? schema.fieldsets
-      : [{ id: 'default', title: 'Default', fields: [] }]
+      : [{ id: 'default', title: t('listingfilters.settings'), fields: [] }]
     ).map((fieldset) => ({
       ...fieldset,
       fields: [...fieldset.fields],
@@ -27,13 +32,16 @@ export function withFilters(upstream: unknown) {
     query.fields.splice(at === -1 ? query.fields.length : at, 0, 'batchSize');
     return {
       ...schema,
-      fieldsets: [...fieldsets, { id: 'filters', title: 'Filters', fields: ['filters'] }],
+      fieldsets: [
+        ...fieldsets,
+        { id: 'filters', title: t('listingfilters.filters'), fields: ['filters'] },
+      ],
       properties: {
         ...schema.properties,
-        filters: { title: 'Filter the results by', widget: 'listingfilters_filters' },
+        filters: { title: t('listingfilters.filterBy'), widget: 'listingfilters_filters' },
         batchSize: {
-          title: 'Results per page',
-          description: 'Filters and the search cover every page. Maximum results still limits the whole listing.',
+          title: t('listingfilters.batchSize'),
+          description: t('listingfilters.batchSizeHint'),
           placeholder: '25',
           type: 'number',
           minimum: 1,

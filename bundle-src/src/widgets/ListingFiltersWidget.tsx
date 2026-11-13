@@ -4,6 +4,7 @@
  * so each control names itself.
  */
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   TEXT_SEARCH,
@@ -65,13 +66,13 @@ function moved<T>(items: T[], from: number, to: number): T[] {
 }
 
 function ItemActions({
-  subject,
+  labels,
   index,
   count,
   onMove,
   onRemove,
 }: {
-  subject: string;
+  labels: { up: string; down: string; remove: string };
   index: number;
   count: number;
   onMove: (to: number) => void;
@@ -79,13 +80,13 @@ function ItemActions({
 }) {
   return (
     <div className="aurora-group-actions">
-      <button type="button" className="aurora-group-action" aria-label={`Move ${subject} up`} disabled={index === 0} onClick={() => onMove(index - 1)}>
+      <button type="button" className="aurora-group-action" aria-label={labels.up} disabled={index === 0} onClick={() => onMove(index - 1)}>
         <Icon name="up" />
       </button>
-      <button type="button" className="aurora-group-action" aria-label={`Move ${subject} down`} disabled={index === count - 1} onClick={() => onMove(index + 1)}>
+      <button type="button" className="aurora-group-action" aria-label={labels.down} disabled={index === count - 1} onClick={() => onMove(index + 1)}>
         <Icon name="down" />
       </button>
-      <button type="button" className="aurora-group-action aurora-group-action-remove" aria-label={`Remove ${subject}`} onClick={onRemove}>
+      <button type="button" className="aurora-group-action aurora-group-action-remove" aria-label={labels.remove} onClick={onRemove}>
         <Icon name="remove" />
       </button>
     </div>
@@ -103,12 +104,13 @@ function AllowList({
   allowList: string[];
   onChange: (allowList: string[]) => void;
 }) {
+  const { t } = useTranslation();
   const values = property?.values ?? [];
   const titles = new Map(values);
   const unchosen = values.filter(([value]) => !allowList.includes(value));
   return (
     <div className="aurora-group-field">
-      <span className={labelClass}>Allowed values</span>
+      <span className={labelClass}>{t('listingfilters.allowedValues')}</span>
       {allowList.length ? (
         <ul className="listing-filters-widget-values">
           {allowList.map((value, index) => {
@@ -117,7 +119,11 @@ function AllowList({
               <li key={value} className="listing-filters-widget-value">
                 <span>{title}</span>
                 <ItemActions
-                  subject={title}
+                  labels={{
+                    up: t('listingfilters.moveValueUp', { value: title }),
+                    down: t('listingfilters.moveValueDown', { value: title }),
+                    remove: t('listingfilters.removeValue', { value: title }),
+                  }}
                   index={index}
                   count={allowList.length}
                   onMove={(to) => onChange(moved(allowList, index, to))}
@@ -129,14 +135,14 @@ function AllowList({
         </ul>
       ) : null}
       <select
-        aria-label={`Add an allowed value to filter ${position}`}
+        aria-label={t('listingfilters.addValueToFilter', { position })}
         className={controlClass}
         value=""
         disabled={!unchosen.length}
         onChange={(event) => onChange([...allowList, event.target.value])}
       >
         <option value="" disabled>
-          Add value…
+          {t('listingfilters.addValue')}
         </option>
         {unchosen.map(([value, title]) => (
           <option key={value} value={value}>
@@ -145,7 +151,7 @@ function AllowList({
         ))}
       </select>
       {allowList.length ? null : (
-        <p className={noteClass}>With none chosen, every value found in the results is offered.</p>
+        <p className={noteClass}>{t('listingfilters.noValuesChosen')}</p>
       )}
     </div>
   );
@@ -153,6 +159,7 @@ function AllowList({
 
 export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
   const { label, description, className, onChange } = props;
+  const { t } = useTranslation();
   const widgetId = useId();
   const labelId = `${widgetId}-label`;
   const { properties, status } = useFilterableProperties();
@@ -188,10 +195,14 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
             >
               <div className="aurora-group-head">
                 <span id={`${filterId}-name`} className="aurora-group-title">
-                  Filter {position}
+                  {t('listingfilters.filter', { position })}
                 </span>
                 <ItemActions
-                  subject={`filter ${position}`}
+                  labels={{
+                    up: t('listingfilters.moveFilterUp', { position }),
+                    down: t('listingfilters.moveFilterDown', { position }),
+                    remove: t('listingfilters.removeFilter', { position }),
+                  }}
                   index={index}
                   count={filters.length}
                   onMove={(to) => update(moved(filters, index, to))}
@@ -200,11 +211,11 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
               </div>
               <div className="aurora-group-field">
                 <label htmlFor={`${filterId}-property`} className={labelClass}>
-                  Property
+                  {t('listingfilters.property')}
                 </label>
                 <select
                   id={`${filterId}-property`}
-                  aria-label={`Filter ${position} property`}
+                  aria-label={t('listingfilters.filterProperty', { position })}
                   className={controlClass}
                   value={filter.field}
                   onChange={(event) => updateRow(index, { field: event.target.value, allowList: [] })}
@@ -221,12 +232,12 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
               </div>
               <div className="aurora-group-field">
                 <label htmlFor={`${filterId}-title`} className={labelClass}>
-                  Title
+                  {t('listingfilters.title')}
                 </label>
                 <input
                   id={`${filterId}-title`}
                   type="text"
-                  aria-label={`Filter ${position} title`}
+                  aria-label={t('listingfilters.filterTitle', { position })}
                   className={controlClass}
                   placeholder={property?.title ?? filter.field}
                   value={filter.title}
@@ -246,7 +257,7 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
         })}
         {status === 'failed' ? (
           <p role="status" className={noteClass}>
-            The properties to filter by could not be loaded.
+            {t('listingfilters.propertiesNotLoaded')}
           </p>
         ) : null}
         <button
@@ -256,7 +267,7 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
           onClick={() => update([...filters, { field: unused[0].field, title: '', allowList: [] }])}
         >
           <Icon name="add" />
-          Add filter
+          {t('listingfilters.addFilter')}
         </button>
       </div>
       {description ? <p className={noteClass}>{description}</p> : null}

@@ -9,6 +9,11 @@
 - Take the filters' frames, actions and **Add filter** slot from
   plone.blicca.auroraeditor's `aurora-group` classes, so the filters look
   like the listing block's criteria and follow their changes.
+- Translate the sidebar's **Filters** and **Results per page** settings: their
+  titles and hints, each filter's heading, field labels, notes and the names
+  of its move, remove and add buttons follow the editor's language, with
+  German shipped. The strings live in `bundle-src/locales/` and reach the
+  editor as the bundle's `locales` export.
 
 
 ## 1.0.0a1 (2026-11-09)

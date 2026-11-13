@@ -1,0 +1,27 @@
+{
+  "listingfilters": {
+    "settings": "Standard",
+    "filters": "Filter",
+    "filterBy": "Ergebnisse filtern nach",
+    "batchSize": "Ergebnisse pro Seite",
+    "batchSizeHint": "Filter und Suche erfassen alle Seiten. Die maximale Anzahl an Ergebnissen begrenzt weiterhin die gesamte Auflistung.",
+    "filter": "Filter {{position}}",
+    "filterProperty": "Eigenschaft von Filter {{position}}",
+    "filterTitle": "Titel von Filter {{position}}",
+    "moveFilterUp": "Filter {{position}} nach oben verschieben",
+    "moveFilterDown": "Filter {{position}} nach unten verschieben",
+    "removeFilter": "Filter {{position}} entfernen",
+    "property": "Eigenschaft",
+    "title": "Titel",
+    "textSearch": "Textsuche",
+    "allowedValues": "Erlaubte Werte",
+    "moveValueUp": "{{value}} nach oben verschieben",
+    "moveValueDown": "{{value}} nach unten verschieben",
+    "removeValue": "{{value}} entfernen",
+    "addValue": "Wert hinzufügen…",
+    "addValueToFilter": "Erlaubten Wert zu Filter {{position}} hinzufügen",
+    "noValuesChosen": "Ist keiner gewählt, werden alle Werte angeboten, die in den Ergebnissen vorkommen.",
+    "propertiesNotLoaded": "Die Eigenschaften zum Filtern konnten nicht geladen werden.",
+    "addFilter": "Filter hinzufügen"
+  }
+}
