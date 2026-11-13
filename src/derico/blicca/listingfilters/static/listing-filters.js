@@ -171,8 +171,16 @@ function useFilterableProperties() {
 }
 const labelClass = "w-fit cursor-default text-xs font-medium text-quanta-pigeon";
 const controlClass = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground";
-const buttonClass = "rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground";
-const noteClass = "text-xs font-normal text-quanta-pigeon";
+const noteClass = "listing-filters-widget-note text-xs font-normal text-quanta-pigeon";
+const ICONS = {
+  up: "M8 13V3M4 7l4-4 4 4",
+  down: "M8 3v10M4 9l4 4 4-4",
+  remove: "M4 4l8 8M12 4l-8 8",
+  add: "M8 3v10M3 8h10"
+};
+function Icon({ name }) {
+  return /* @__PURE__ */ jsx("svg", { viewBox: "0 0 16 16", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ jsx("path", { d: ICONS[name] }) });
+}
 function storedFilters(value) {
   if (!Array.isArray(value)) return [];
   return value.filter((entry) => typeof entry?.field === "string").map((entry) => ({
@@ -187,6 +195,19 @@ function moved(items, from, to) {
   next.splice(to, 0, item);
   return next;
 }
+function ItemActions({
+  subject,
+  index,
+  count,
+  onMove,
+  onRemove
+}) {
+  return /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-actions", children: [
+    /* @__PURE__ */ jsx("button", { type: "button", className: "listing-filters-widget-action", "aria-label": `Move ${subject} up`, disabled: index === 0, onClick: () => onMove(index - 1), children: /* @__PURE__ */ jsx(Icon, { name: "up" }) }),
+    /* @__PURE__ */ jsx("button", { type: "button", className: "listing-filters-widget-action", "aria-label": `Move ${subject} down`, disabled: index === count - 1, onClick: () => onMove(index + 1), children: /* @__PURE__ */ jsx(Icon, { name: "down" }) }),
+    /* @__PURE__ */ jsx("button", { type: "button", className: "listing-filters-widget-action listing-filters-widget-remove", "aria-label": `Remove ${subject}`, onClick: onRemove, children: /* @__PURE__ */ jsx(Icon, { name: "remove" }) })
+  ] });
+}
 function AllowList({
   position,
   property,
@@ -196,17 +217,24 @@ function AllowList({
   const values = property?.values ?? [];
   const titles = new Map(values);
   const unchosen = values.filter(([value]) => !allowList.includes(value));
-  return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
+  return /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-field", children: [
     /* @__PURE__ */ jsx("span", { className: labelClass, children: "Allowed values" }),
-    allowList.length ? /* @__PURE__ */ jsx("ul", { className: "flex flex-col gap-1", children: allowList.map((value, index) => {
+    allowList.length ? /* @__PURE__ */ jsx("ul", { className: "listing-filters-widget-values", children: allowList.map((value, index) => {
       const title = titles.get(value) ?? value;
-      return /* @__PURE__ */ jsxs("li", { className: "flex items-center gap-1 text-sm", children: [
-        /* @__PURE__ */ jsx("span", { className: "grow", children: title }),
-        /* @__PURE__ */ jsx("button", { type: "button", className: buttonClass, "aria-label": `Move ${title} up`, disabled: index === 0, onClick: () => onChange(moved(allowList, index, index - 1)), children: "↑" }),
-        /* @__PURE__ */ jsx("button", { type: "button", className: buttonClass, "aria-label": `Move ${title} down`, disabled: index === allowList.length - 1, onClick: () => onChange(moved(allowList, index, index + 1)), children: "↓" }),
-        /* @__PURE__ */ jsx("button", { type: "button", className: buttonClass, "aria-label": `Remove ${title}`, onClick: () => onChange(allowList.filter((item) => item !== value)), children: "×" })
+      return /* @__PURE__ */ jsxs("li", { className: "listing-filters-widget-value", children: [
+        /* @__PURE__ */ jsx("span", { children: title }),
+        /* @__PURE__ */ jsx(
+          ItemActions,
+          {
+            subject: title,
+            index,
+            count: allowList.length,
+            onMove: (to) => onChange(moved(allowList, index, to)),
+            onRemove: () => onChange(allowList.filter((item) => item !== value))
+          }
+        )
       ] }, value);
-    }) }) : /* @__PURE__ */ jsx("p", { className: noteClass, children: "With none chosen, every value found in the results is offered." }),
+    }) }) : null,
     /* @__PURE__ */ jsxs(
       "select",
       {
@@ -220,12 +248,14 @@ function AllowList({
           unchosen.map(([value, title]) => /* @__PURE__ */ jsx("option", { value, children: title }, value))
         ]
       }
-    )
+    ),
+    allowList.length ? null : /* @__PURE__ */ jsx("p", { className: noteClass, children: "With none chosen, every value found in the results is offered." })
   ] });
 }
 function ListingFiltersWidget(props) {
   const { label, description, className, onChange } = props;
-  const labelId = useId();
+  const widgetId = useId();
+  const labelId = `${widgetId}-label`;
   const { properties, status } = useFilterableProperties();
   const filters = storedFilters(props.value ?? props.defaultValue);
   const update = (next) => onChange?.(next);
@@ -234,68 +264,97 @@ function ListingFiltersWidget(props) {
   return /* @__PURE__ */ jsxs(
     "div",
     {
-      className: `listing-filters-widget flex flex-col gap-1${className ? ` ${className}` : ""}`,
+      className: `listing-filters-widget${className ? ` ${className}` : ""}`,
       role: "group",
       "aria-labelledby": label ? labelId : void 0,
       children: [
         label ? /* @__PURE__ */ jsx("span", { id: labelId, className: labelClass, children: label }) : null,
-        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-3", children: [
+        /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-list", children: [
           filters.map((filter, index) => {
             const position = index + 1;
             const property = properties.find(({ field }) => field === filter.field);
-            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsxs(
-                "select",
-                {
-                  "aria-label": `Filter ${position} property`,
-                  className: controlClass,
-                  value: filter.field,
-                  onChange: (event) => updateRow(index, { field: event.target.value, allowList: [] }),
-                  children: [
-                    property ? null : /* @__PURE__ */ jsx("option", { value: filter.field, children: filter.field }),
-                    properties.filter(({ field }) => field === filter.field || unused.some((free) => free.field === field)).map(({ field, title }) => /* @__PURE__ */ jsx("option", { value: field, children: title }, field))
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
-                /* @__PURE__ */ jsx("span", { className: labelClass, children: "Title" }),
-                /* @__PURE__ */ jsx(
-                  "input",
-                  {
-                    type: "text",
-                    "aria-label": `Filter ${position} title`,
-                    className: controlClass,
-                    placeholder: property?.title ?? filter.field,
-                    value: filter.title,
-                    onChange: (event) => updateRow(index, { title: event.target.value })
-                  }
-                )
-              ] }),
-              filter.field === TEXT_SEARCH ? null : /* @__PURE__ */ jsx(
-                AllowList,
-                {
-                  position,
-                  property,
-                  allowList: filter.allowList,
-                  onChange: (allowList) => updateRow(index, { allowList })
-                }
-              ),
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsx("button", { type: "button", className: buttonClass, "aria-label": `Move filter ${position} up`, disabled: index === 0, onClick: () => update(moved(filters, index, index - 1)), children: "↑" }),
-                /* @__PURE__ */ jsx("button", { type: "button", className: buttonClass, "aria-label": `Move filter ${position} down`, disabled: index === filters.length - 1, onClick: () => update(moved(filters, index, index + 1)), children: "↓" }),
-                /* @__PURE__ */ jsx("button", { type: "button", className: buttonClass, "aria-label": `Remove filter ${position}`, onClick: () => update(filters.filter((_filter, i) => i !== index)), children: "×" })
-              ] })
-            ] }, `${filter.field}:${index}`);
+            const filterId = `${widgetId}-${index}`;
+            return /* @__PURE__ */ jsxs(
+              "div",
+              {
+                className: "listing-filters-widget-filter",
+                role: "group",
+                "aria-labelledby": `${filterId}-name`,
+                children: [
+                  /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-head", children: [
+                    /* @__PURE__ */ jsxs("span", { id: `${filterId}-name`, className: "listing-filters-widget-name", children: [
+                      "Filter ",
+                      position
+                    ] }),
+                    /* @__PURE__ */ jsx(
+                      ItemActions,
+                      {
+                        subject: `filter ${position}`,
+                        index,
+                        count: filters.length,
+                        onMove: (to) => update(moved(filters, index, to)),
+                        onRemove: () => update(filters.filter((_filter, i) => i !== index))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-field", children: [
+                    /* @__PURE__ */ jsx("label", { htmlFor: `${filterId}-property`, className: labelClass, children: "Property" }),
+                    /* @__PURE__ */ jsxs(
+                      "select",
+                      {
+                        id: `${filterId}-property`,
+                        "aria-label": `Filter ${position} property`,
+                        className: controlClass,
+                        value: filter.field,
+                        onChange: (event) => updateRow(index, { field: event.target.value, allowList: [] }),
+                        children: [
+                          property ? null : /* @__PURE__ */ jsx("option", { value: filter.field, children: filter.field }),
+                          properties.filter(({ field }) => field === filter.field || unused.some((free) => free.field === field)).map(({ field, title }) => /* @__PURE__ */ jsx("option", { value: field, children: title }, field))
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-field", children: [
+                    /* @__PURE__ */ jsx("label", { htmlFor: `${filterId}-title`, className: labelClass, children: "Title" }),
+                    /* @__PURE__ */ jsx(
+                      "input",
+                      {
+                        id: `${filterId}-title`,
+                        type: "text",
+                        "aria-label": `Filter ${position} title`,
+                        className: controlClass,
+                        placeholder: property?.title ?? filter.field,
+                        value: filter.title,
+                        onChange: (event) => updateRow(index, { title: event.target.value })
+                      }
+                    )
+                  ] }),
+                  filter.field === TEXT_SEARCH ? null : /* @__PURE__ */ jsx(
+                    AllowList,
+                    {
+                      position,
+                      property,
+                      allowList: filter.allowList,
+                      onChange: (allowList) => updateRow(index, { allowList })
+                    }
+                  )
+                ]
+              },
+              `${filter.field}:${index}`
+            );
           }),
           status === "failed" ? /* @__PURE__ */ jsx("p", { role: "status", className: noteClass, children: "The properties to filter by could not be loaded." }) : null,
-          /* @__PURE__ */ jsx(
+          /* @__PURE__ */ jsxs(
             "button",
             {
               type: "button",
-              className: buttonClass,
+              className: "listing-filters-widget-add",
               disabled: status === "loading" || !unused.length,
               onClick: () => update([...filters, { field: unused[0].field, title: "", allowList: [] }]),
-              children: "Add filter"
+              children: [
+                /* @__PURE__ */ jsx(Icon, { name: "add" }),
+                "Add filter"
+              ]
             }
           )
         ] }),
