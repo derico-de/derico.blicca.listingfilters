@@ -130,8 +130,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  /* The settings form sets dark ink for a white sheet. */
-  color: var(--aurora-sidebar-fg, inherit);
 }
 
 /* A theme indents every list and sets it off from what follows. */
