@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0a2 (unreleased)
+## 1.0.0a2 (2026-11-13)
 
 - Frame each filter in the sidebar's **Filters** setting as a group of its
   own, headed by its number and its move and remove buttons, so a filter
