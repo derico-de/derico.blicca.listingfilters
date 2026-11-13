@@ -180,9 +180,9 @@ async function setUpFiltersInTheEditor(page) {
   const filtersToggle = sidebar.getByRole('button', { name: 'Filters', exact: true });
   await filtersToggle.waitFor();
   expectEqual(await filtersToggle.getAttribute('aria-expanded'), 'false', 'Filters starts collapsed');
-  const batchSize = sidebar.getByLabel('Results per page');
+  const batchSize = sidebar.getByRole('textbox', { name: 'Results per page' });
   expectEqual(await batchSize.isVisible(), true, 'results per page is visible with Filters collapsed');
-  const maximum = sidebar.getByLabel('Maximum results', { exact: true });
+  const maximum = sidebar.getByRole('textbox', { name: 'Maximum results', exact: true });
   const batchBounds = await batchSize.boundingBox();
   const limitBounds = await maximum.boundingBox();
   expectEqual(
@@ -191,9 +191,11 @@ async function setUpFiltersInTheEditor(page) {
     'results per page is rendered above maximum results',
   );
   expectEqual(
-    await batchSize.evaluate((input) =>
-      input.parentElement.nextElementSibling?.querySelector('input')?.name),
-    'querystring.limit',
+    await batchSize.evaluate((input) => {
+      const fields = [...input.closest('form').querySelectorAll('input:not([type=hidden])')];
+      return fields[fields.indexOf(input) + 1]?.id;
+    }),
+    await maximum.getAttribute('id'),
     'maximum results is the very next field after results per page',
   );
   if (SHOTS) {
@@ -235,7 +237,7 @@ async function setUpFiltersInTheEditor(page) {
   );
   expectEqual(await options.allTextContents(), [GREEN, RED], 'the canvas previews the filters');
   await until(() => shownTitles(block), ['Alpha', 'Beta', 'Gamma'], 'all results fit the default page');
-  expectEqual(await batchSize.getAttribute('type'), 'number', 'the batch size takes a number');
+  expectEqual(await batchSize.getAttribute('inputmode'), 'numeric', 'the batch size takes a number');
   await batchSize.fill('2');
   await maximum.fill('3');
   await until(() => shownTitles(block), ['Alpha', 'Beta'], 'the canvas pages by the batch size');
