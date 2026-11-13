@@ -2,7 +2,8 @@
  *
  *  1. In the editor, results per page stays visible above maximum results
  *     with Filters collapsed. Filters adds a Tag filter with an allow list
- *     and a text search. The canvas narrows
+ *     and a text search. Each is a framed group around its own fields and
+ *     actions, apart from the next, with readable values. The canvas narrows
  *     like a public page:
  *     options, the live search from the third letter, the pager and reset
  *     all work, stay in the editor, and none of it is stored.
@@ -227,6 +228,7 @@ async function setUpFiltersInTheEditor(page) {
     return style.color !== style.backgroundColor;
   });
   expectEqual(glyph, true, 'the sidebar buttons show their glyphs');
+  await expectFramedFilters(widget);
 
   const options = block.locator('.listing-filter-options a');
   await options.first().waitFor({ timeout: 15000 });
@@ -263,6 +265,60 @@ async function setUpFiltersInTheEditor(page) {
   expectEqual(stored.querystring.limit, 3, 'the separate maximum is stored as a number');
   expectEqual(stored.querystring.query.length, 2, 'setting the maximum preserves the criteria');
   expectEqual(stored.filtersPreview, undefined, 'what narrowed the preview is not stored');
+}
+
+function measureFilterFrames(root) {
+  const box = (node) => node.getBoundingClientRect();
+  const frames = [...root.querySelectorAll('[role=group]')];
+  const [first, second] = frames;
+  const within = (inner, outer) =>
+    inner.left >= outer.left && inner.right <= outer.right && inner.top >= outer.top && inner.bottom <= outer.bottom;
+  // Composites the colours on a canvas, which resolves any CSS colour syntax.
+  const canvas = Object.assign(document.createElement('canvas'), { width: 1, height: 1 });
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  const luminance = (...colors) => {
+    context.clearRect(0, 0, 1, 1);
+    for (const color of colors) {
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+    }
+    const [r, g, b] = [...context.getImageData(0, 0, 1, 1).data].slice(0, 3).map((channel) => {
+      const value = channel / 255;
+      return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const color = (node) => getComputedStyle(node).color;
+  const background = (node) => getComputedStyle(node).backgroundColor;
+  const ground = [background(root.closest('#sidebar')), background(first)];
+  const value = first.querySelector('li span');
+  const [lighter, darker] = [luminance(...ground, color(value)), luminance(...ground)].sort((a, b) => b - a);
+  const firstField = first.querySelector('select');
+  const actions = box(first.querySelector('[aria-label="Remove filter 1"]'));
+  return {
+    filters: frames.length,
+    gap: Math.round(box(second).top - box(first).bottom),
+    framed: frames.every((frame) => {
+      const style = getComputedStyle(frame);
+      return style.borderTopStyle === 'solid' && parseFloat(style.borderTopWidth) >= 1 && parseFloat(style.paddingLeft) >= 8;
+    }),
+    contained: frames.every((frame) =>
+      [...frame.querySelectorAll('select, input, button, li')].every((control) => within(box(control), box(frame)))),
+    actionsHeadTheFilter: actions.bottom <= box(firstField).top && actions.left > box(firstField).left,
+    valuesStartAtTheFields: Math.round(box(value).left - box(firstField).left),
+    valuesAreReadable: (lighter + 0.05) / (darker + 0.05) >= 4.5,
+  };
+}
+
+async function expectFramedFilters(widget) {
+  const measured = await widget.evaluate(measureFilterFrames);
+  expectEqual(measured.filters, 2, 'each filter is a group of its own');
+  expectEqual(measured.framed, true, 'a filter has a border and room inside it');
+  expectEqual(measured.gap, 16, 'the filters stand 1rem apart');
+  expectEqual(measured.contained, true, "a filter's frame holds its fields and actions");
+  expectEqual(measured.actionsHeadTheFilter, true, 'a filter is headed by its actions, at the far end');
+  expectEqual(measured.valuesStartAtTheFields, 0, 'the allowed values line up with the fields');
+  expectEqual(measured.valuesAreReadable, true, 'an allowed value reads on the sidebar');
 }
 
 async function narrowOnTheCanvas(page, block, options) {

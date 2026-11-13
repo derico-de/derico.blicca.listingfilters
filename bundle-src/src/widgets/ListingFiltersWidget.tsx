@@ -22,10 +22,26 @@ export type ListingFiltersWidgetProps = {
   onChange?: (value: Filter[]) => void;
 };
 
+// The field faces are the host's classes. The layout around them is this
+// add-on's own, in styles.css under `.listing-filters-widget`.
 const labelClass = 'w-fit cursor-default text-xs font-medium text-quanta-pigeon';
 const controlClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground';
-const buttonClass = 'rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground';
-const noteClass = 'text-xs font-normal text-quanta-pigeon';
+const noteClass = 'listing-filters-widget-note text-xs font-normal text-quanta-pigeon';
+
+const ICONS = {
+  up: 'M8 13V3M4 7l4-4 4 4',
+  down: 'M8 3v10M4 9l4 4 4-4',
+  remove: 'M4 4l8 8M12 4l-8 8',
+  add: 'M8 3v10M3 8h10',
+};
+
+function Icon({ name }: { name: keyof typeof ICONS }) {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={ICONS[name]} />
+    </svg>
+  );
+}
 
 function storedFilters(value: unknown): Filter[] {
   if (!Array.isArray(value)) return [];
@@ -47,6 +63,34 @@ function moved<T>(items: T[], from: number, to: number): T[] {
   return next;
 }
 
+function ItemActions({
+  subject,
+  index,
+  count,
+  onMove,
+  onRemove,
+}: {
+  subject: string;
+  index: number;
+  count: number;
+  onMove: (to: number) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="listing-filters-widget-actions">
+      <button type="button" className="listing-filters-widget-action" aria-label={`Move ${subject} up`} disabled={index === 0} onClick={() => onMove(index - 1)}>
+        <Icon name="up" />
+      </button>
+      <button type="button" className="listing-filters-widget-action" aria-label={`Move ${subject} down`} disabled={index === count - 1} onClick={() => onMove(index + 1)}>
+        <Icon name="down" />
+      </button>
+      <button type="button" className="listing-filters-widget-action listing-filters-widget-remove" aria-label={`Remove ${subject}`} onClick={onRemove}>
+        <Icon name="remove" />
+      </button>
+    </div>
+  );
+}
+
 function AllowList({
   position,
   property,
@@ -62,31 +106,27 @@ function AllowList({
   const titles = new Map(values);
   const unchosen = values.filter(([value]) => !allowList.includes(value));
   return (
-    <div className="flex flex-col gap-1">
+    <div className="listing-filters-widget-field">
       <span className={labelClass}>Allowed values</span>
       {allowList.length ? (
-        <ul className="flex flex-col gap-1">
+        <ul className="listing-filters-widget-values">
           {allowList.map((value, index) => {
             const title = titles.get(value) ?? value;
             return (
-              <li key={value} className="flex items-center gap-1 text-sm">
-                <span className="grow">{title}</span>
-                <button type="button" className={buttonClass} aria-label={`Move ${title} up`} disabled={index === 0} onClick={() => onChange(moved(allowList, index, index - 1))}>
-                  ↑
-                </button>
-                <button type="button" className={buttonClass} aria-label={`Move ${title} down`} disabled={index === allowList.length - 1} onClick={() => onChange(moved(allowList, index, index + 1))}>
-                  ↓
-                </button>
-                <button type="button" className={buttonClass} aria-label={`Remove ${title}`} onClick={() => onChange(allowList.filter((item) => item !== value))}>
-                  ×
-                </button>
+              <li key={value} className="listing-filters-widget-value">
+                <span>{title}</span>
+                <ItemActions
+                  subject={title}
+                  index={index}
+                  count={allowList.length}
+                  onMove={(to) => onChange(moved(allowList, index, to))}
+                  onRemove={() => onChange(allowList.filter((item) => item !== value))}
+                />
               </li>
             );
           })}
         </ul>
-      ) : (
-        <p className={noteClass}>With none chosen, every value found in the results is offered.</p>
-      )}
+      ) : null}
       <select
         aria-label={`Add an allowed value to filter ${position}`}
         className={controlClass}
@@ -103,13 +143,17 @@ function AllowList({
           </option>
         ))}
       </select>
+      {allowList.length ? null : (
+        <p className={noteClass}>With none chosen, every value found in the results is offered.</p>
+      )}
     </div>
   );
 }
 
 export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
   const { label, description, className, onChange } = props;
-  const labelId = useId();
+  const widgetId = useId();
+  const labelId = `${widgetId}-label`;
   const { properties, status } = useFilterableProperties();
   const filters = storedFilters(props.value ?? props.defaultValue);
 
@@ -120,7 +164,7 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
 
   return (
     <div
-      className={`listing-filters-widget flex flex-col gap-1${className ? ` ${className}` : ''}`}
+      className={`listing-filters-widget${className ? ` ${className}` : ''}`}
       role="group"
       aria-labelledby={label ? labelId : undefined}
     >
@@ -129,30 +173,57 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
           {label}
         </span>
       ) : null}
-      <div className="flex flex-col gap-3">
+      <div className="listing-filters-widget-list">
         {filters.map((filter, index) => {
           const position = index + 1;
           const property = properties.find(({ field }) => field === filter.field);
+          const filterId = `${widgetId}-${index}`;
           return (
-            <div key={`${filter.field}:${index}`} className="flex flex-col gap-1">
-              <select
-                aria-label={`Filter ${position} property`}
-                className={controlClass}
-                value={filter.field}
-                onChange={(event) => updateRow(index, { field: event.target.value, allowList: [] })}
-              >
-                {property ? null : <option value={filter.field}>{filter.field}</option>}
-                {properties
-                  .filter(({ field }) => field === filter.field || unused.some((free) => free.field === field))
-                  .map(({ field, title }) => (
-                    <option key={field} value={field}>
-                      {title}
-                    </option>
-                  ))}
-              </select>
-              <div className="flex flex-col gap-1">
-                <span className={labelClass}>Title</span>
+            <div
+              key={`${filter.field}:${index}`}
+              className="listing-filters-widget-filter"
+              role="group"
+              aria-labelledby={`${filterId}-name`}
+            >
+              <div className="listing-filters-widget-head">
+                <span id={`${filterId}-name`} className="listing-filters-widget-name">
+                  Filter {position}
+                </span>
+                <ItemActions
+                  subject={`filter ${position}`}
+                  index={index}
+                  count={filters.length}
+                  onMove={(to) => update(moved(filters, index, to))}
+                  onRemove={() => update(filters.filter((_filter, i) => i !== index))}
+                />
+              </div>
+              <div className="listing-filters-widget-field">
+                <label htmlFor={`${filterId}-property`} className={labelClass}>
+                  Property
+                </label>
+                <select
+                  id={`${filterId}-property`}
+                  aria-label={`Filter ${position} property`}
+                  className={controlClass}
+                  value={filter.field}
+                  onChange={(event) => updateRow(index, { field: event.target.value, allowList: [] })}
+                >
+                  {property ? null : <option value={filter.field}>{filter.field}</option>}
+                  {properties
+                    .filter(({ field }) => field === filter.field || unused.some((free) => free.field === field))
+                    .map(({ field, title }) => (
+                      <option key={field} value={field}>
+                        {title}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="listing-filters-widget-field">
+                <label htmlFor={`${filterId}-title`} className={labelClass}>
+                  Title
+                </label>
                 <input
+                  id={`${filterId}-title`}
                   type="text"
                   aria-label={`Filter ${position} title`}
                   className={controlClass}
@@ -169,17 +240,6 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
                   onChange={(allowList) => updateRow(index, { allowList })}
                 />
               )}
-              <div className="flex items-center gap-2">
-                <button type="button" className={buttonClass} aria-label={`Move filter ${position} up`} disabled={index === 0} onClick={() => update(moved(filters, index, index - 1))}>
-                  ↑
-                </button>
-                <button type="button" className={buttonClass} aria-label={`Move filter ${position} down`} disabled={index === filters.length - 1} onClick={() => update(moved(filters, index, index + 1))}>
-                  ↓
-                </button>
-                <button type="button" className={buttonClass} aria-label={`Remove filter ${position}`} onClick={() => update(filters.filter((_filter, i) => i !== index))}>
-                  ×
-                </button>
-              </div>
             </div>
           );
         })}
@@ -190,10 +250,11 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
         ) : null}
         <button
           type="button"
-          className={buttonClass}
+          className="listing-filters-widget-add"
           disabled={status === 'loading' || !unused.length}
           onClick={() => update([...filters, { field: unused[0].field, title: '', allowList: [] }])}
         >
+          <Icon name="add" />
           Add filter
         </button>
       </div>

@@ -2,8 +2,10 @@
 
 ## 1.0.0a2 (unreleased)
 
-
-- Nothing changed yet.
+- Frame each filter in the sidebar's **Filters** setting as a group of its
+  own, headed by its number and its move and remove buttons, so a filter
+  shows where it starts and ends. Its property gets a label, and the allowed
+  values line up with the fields and read on the dark sidebar.
 
 
 ## 1.0.0a1 (2026-11-09)

@@ -69,12 +69,13 @@ does the same.
 
 Select a Listing block in the editor and open **Filters** in the sidebar.
 
-- **Add filter** adds a row. Choose its property, and optionally a title in
-  place of the property's own.
+- **Add filter** adds a filter, a framed group numbered in the order visitors
+  see them. Choose its property, and optionally a title in place of the
+  property's own.
 - **Allowed values** is the allow list. With none chosen, every value found
   in the results is offered.
-- The arrows reorder the filters and the allowed values, the cross removes
-  them.
+- The arrows and the cross in a filter's heading move and remove the filter,
+  those beside an allowed value that value.
 - **Results per page** sets the pager's page size, for example 6 for a grid of
   3 × 2. Left empty, the listing's own `b_size` applies, otherwise 25. It is
   stored as `batchSize` in the block's data. **Maximum results** still caps the

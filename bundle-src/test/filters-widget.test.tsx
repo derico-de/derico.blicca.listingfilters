@@ -127,6 +127,37 @@ describe('the filter rows', () => {
     expect(label.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('labels the property field', async () => {
+    await renderWidget([{ field: 'Subject', title: '', allowList: [] }]);
+
+    const label = screen.getByText('Property') as HTMLLabelElement;
+    expect(label.htmlFor).toBe(screen.getByRole('combobox', { name: 'Filter 1 property' }).id);
+  });
+
+  it('frames each filter as a group of its own fields and actions', async () => {
+    await renderWidget([
+      { field: 'Subject', title: '', allowList: ['News'] },
+      { field: 'SearchableText', title: '', allowList: [] },
+    ]);
+
+    const first = within(screen.getByRole('group', { name: 'Filter 1' }));
+    const second = within(screen.getByRole('group', { name: 'Filter 2' }));
+    expect(first.getByRole('combobox', { name: 'Filter 1 property' })).toBeTruthy();
+    expect(first.getByRole('button', { name: 'Remove filter 1' })).toBeTruthy();
+    expect(first.getByRole('button', { name: 'Remove News' })).toBeTruthy();
+    expect(first.queryByRole('textbox', { name: 'Filter 2 title' })).toBeNull();
+    expect(second.getByRole('textbox', { name: 'Filter 2 title' })).toBeTruthy();
+    expect(second.getByRole('button', { name: 'Move filter 2 up' })).toBeTruthy();
+  });
+
+  it('heads a filter with its actions, before its fields', async () => {
+    await renderWidget([{ field: 'Subject', title: '', allowList: [] }]);
+
+    const remove = screen.getByRole('button', { name: 'Remove filter 1' });
+    const property = screen.getByRole('combobox', { name: 'Filter 1 property' });
+    expect(remove.compareDocumentPosition(property) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('adds a filter on the first unused property', async () => {
     const { add, stored } = await renderWidget([{ field: 'Subject', title: '', allowList: [] }]);
 
@@ -236,6 +267,14 @@ describe('the allow list', () => {
 
     const values = screen.getAllByRole('listitem').map((item) => item.querySelector('span')?.textContent);
     expect(values).toEqual(['News item', 'Gone']);
+  });
+
+  it('explains an empty list below the field that fills it', async () => {
+    await renderWidget(tagFilter([]));
+
+    const add = screen.getByRole('combobox', { name: 'Add an allowed value to filter 1' });
+    const note = screen.getByText(/With none chosen/);
+    expect(add.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('does not apply to the text search', async () => {
