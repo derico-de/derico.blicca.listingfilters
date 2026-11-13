@@ -1,6 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import install from '../src/index';
+import install, { locales } from '../src/index';
+import { editorIn } from './i18n';
+
+beforeEach(() => {
+  editorIn('en');
+});
 
 const coreSchema = () => ({
   title: 'Listing',
@@ -43,6 +48,19 @@ describe('install', () => {
     const schema = install(hostConfig()).blocks.blocksConfig.listing.blockSchema({ formData: {} });
 
     expect(schema.properties.batchSize).toMatchObject({ title: 'Results per page', type: 'number', minimum: 1 });
+  });
+
+  it('labels its settings in German in a German editor', () => {
+    editorIn('de');
+    const schema = install(hostConfig()).blocks.blocksConfig.listing.blockSchema({ formData: {} });
+
+    expect(schema.fieldsets[1].title).toBe('Filter');
+    expect(schema.properties.filters.title).toBe('Ergebnisse filtern nach');
+    expect(schema.properties.batchSize).toMatchObject({
+      title: 'Ergebnisse pro Seite',
+      description:
+        'Filter und Suche erfassen alle Seiten. Die maximale Anzahl an Ergebnissen begrenzt weiterhin die gesamte Auflistung.',
+    });
   });
 
   it('keeps results per page when the core schema has no fieldsets', () => {
@@ -138,5 +156,21 @@ describe('install', () => {
     const config = { registerWidget: vi.fn(), blocks: { blocksConfig: {} as Record<string, any> } };
 
     expect(install(config).blocks.blocksConfig).toEqual({});
+  });
+});
+
+describe('the catalogs the bundle exports', () => {
+  const keys = (catalog: object, prefix = ''): string[] =>
+    Object.entries(catalog).flatMap(([key, value]) =>
+      typeof value === 'object' ? keys(value, `${prefix}${key}.`) : [`${prefix}${key}`],
+    );
+
+  it('keep every string under the add-on\'s own prefix', () => {
+    expect(Object.keys(locales.en)).toEqual(['listingfilters']);
+    expect(Object.keys(locales.de)).toEqual(['listingfilters']);
+  });
+
+  it('translate every English string into German', () => {
+    expect(keys(locales.de).sort()).toEqual(keys(locales.en).sort());
   });
 });

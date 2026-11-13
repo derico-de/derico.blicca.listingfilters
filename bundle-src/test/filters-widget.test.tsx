@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetFilterablePropertiesCache } from '../src/widgets/filterable-properties';
 import { ListingFiltersWidget } from '../src/widgets/ListingFiltersWidget';
+import { InEditorLanguage } from './i18n';
 
 const QUERYSTRING = {
   indexes: {
@@ -45,11 +46,17 @@ function Harness({ initial, onChange }: { initial?: unknown; onChange?: (value: 
   );
 }
 
-async function renderWidget(initial?: unknown) {
+const ADD_FILTER: Record<string, string> = { en: 'Add filter', de: 'Filter hinzufügen' };
+
+async function renderWidget(initial?: unknown, language = 'en') {
   const onChange = vi.fn();
-  render(<Harness initial={initial} onChange={onChange} />);
+  render(
+    <InEditorLanguage language={language}>
+      <Harness initial={initial} onChange={onChange} />
+    </InEditorLanguage>,
+  );
   await act(() => new Promise((settled) => setTimeout(settled)));
-  const add = screen.getByRole('button', { name: 'Add filter' });
+  const add = screen.getByRole('button', { name: ADD_FILTER[language] });
   return { add, onChange, stored: () => onChange.mock.lastCall?.[0] };
 }
 
@@ -96,7 +103,11 @@ describe('the properties a filter can use', () => {
     const fetchMock = stubFetch();
 
     await renderWidget();
-    render(<Harness />);
+    render(
+      <InEditorLanguage language="en">
+        <Harness />
+      </InEditorLanguage>,
+    );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -281,5 +292,51 @@ describe('the allow list', () => {
     await renderWidget([{ field: 'SearchableText', title: '', allowList: [] }]);
 
     expect(screen.queryByRole('combobox', { name: 'Add an allowed value to filter 1' })).toBeNull();
+  });
+});
+
+describe('in a German editor', () => {
+  const tags = [{ field: 'Subject', title: '', allowList: ['News', 'Press'] }];
+
+  it('labels a filter and its fields in German', async () => {
+    await renderWidget(tags, 'de');
+
+    const filter = within(screen.getByRole('group', { name: 'Filter 1' }));
+    expect(filter.getByRole('combobox', { name: 'Eigenschaft von Filter 1' })).toBeTruthy();
+    expect(filter.getByRole('textbox', { name: 'Titel von Filter 1' })).toBeTruthy();
+    expect(filter.getByText('Eigenschaft')).toBeTruthy();
+    expect(filter.getByText('Titel')).toBeTruthy();
+    expect(filter.getByText('Erlaubte Werte')).toBeTruthy();
+    expect(filter.getByRole('combobox', { name: 'Erlaubten Wert zu Filter 1 hinzufügen' })).toBeTruthy();
+    expect(filter.getByRole('option', { name: 'Wert hinzufügen…' })).toBeTruthy();
+  });
+
+  it('names the move and remove buttons in German', async () => {
+    await renderWidget(tags, 'de');
+
+    for (const name of [
+      'Filter 1 nach oben verschieben',
+      'Filter 1 nach unten verschieben',
+      'Filter 1 entfernen',
+      'Press nach oben verschieben',
+      'News nach unten verschieben',
+      'News entfernen',
+    ]) {
+      expect(screen.getByRole('button', { name })).toBeTruthy();
+    }
+  });
+
+  it('offers the text search and its notes in German', async () => {
+    stubFetch({}, false);
+    const { add } = await renderWidget([{ field: 'Subject', title: '', allowList: [] }], 'de');
+
+    expect(screen.getByText(/Ist keiner gewählt/)).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toBe(
+      'Die Eigenschaften zum Filtern konnten nicht geladen werden.',
+    );
+    fireEvent.click(add);
+    expect(optionLabels(screen.getByRole('combobox', { name: 'Eigenschaft von Filter 2' }))).toEqual([
+      'Textsuche',
+    ]);
   });
 });

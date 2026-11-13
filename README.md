@@ -36,7 +36,8 @@ the options, and a listing with no filters renders exactly as it did.
   JavaScript the same links load the page.
 - **A pager over the narrowed results**, with a results-per-page setting for
   the block. Filters and the search cover every page.
-- **Translated** into German.
+- **Translated** into German, on the page and in the editor's **Filters**
+  setting.
 
 ## Requirements
 
@@ -202,7 +203,8 @@ class `injecting`, on the canvas an ancestor has `aria-busy="true"`.
 
 The editor half lives in `bundle-src/` as the npm package
 `@derico/aurora-listingfilters-block` (not yet published). In Aurora today it
-only adds the **Filters** setting to the Listing block:
+only adds the **Filters** setting to the Listing block, its labels
+translated from the package's `locales/`:
 
 - **Nothing narrows yet.** Aurora renders its own Listing view, which shows no
   filters, and the narrowing lives in this package's Blicca view.

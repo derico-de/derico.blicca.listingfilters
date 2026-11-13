@@ -1,5 +1,6 @@
 import config from '@plone/registry';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const TEXT_SEARCH = 'SearchableText';
 
@@ -8,8 +9,6 @@ export type FilterableProperty = {
   title: string;
   values: Array<[value: string, title: string]>;
 };
-
-const TEXT_SEARCH_PROPERTY: FilterableProperty = { field: TEXT_SEARCH, title: 'Text search', values: [] };
 
 // A criterion of the query, not a property of the content.
 const NOT_A_PROPERTY = ['show_inactive'];
@@ -70,6 +69,7 @@ export type FilterablePropertiesState = {
 };
 
 export function useFilterableProperties(): FilterablePropertiesState {
+  const { t } = useTranslation();
   const [fetched, setFetched] = useState<FilterableProperty[] | null | undefined>(undefined);
 
   useEffect(() => {
@@ -88,7 +88,10 @@ export function useFilterableProperties(): FilterablePropertiesState {
   }, []);
 
   return {
-    properties: [...(fetched ?? []), TEXT_SEARCH_PROPERTY],
+    properties: [
+      ...(fetched ?? []),
+      { field: TEXT_SEARCH, title: t('listingfilters.textSearch'), values: [] },
+    ],
     status: fetched === undefined ? 'loading' : fetched === null ? 'failed' : 'ready',
   };
 }

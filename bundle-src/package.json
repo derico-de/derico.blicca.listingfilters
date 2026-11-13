@@ -16,6 +16,7 @@
   },
   "files": [
     "src",
+    "locales",
     "!src/**/*.test.*"
   ],
   "scripts": {
@@ -26,7 +27,8 @@
   "peerDependencies": {
     "@plone/helpers": "^2.0.0-alpha.8",
     "@plone/registry": "^4.0.0-alpha.3",
-    "react": "^18 || ^19"
+    "react": "^18 || ^19",
+    "react-i18next": "^15.0.0"
   },
   "devDependencies": {
     "@plone/helpers": "2.0.0-alpha.8",
@@ -34,10 +36,12 @@
     "@testing-library/react": "^16.1.0",
     "@types/node": "^26.4.0",
     "@types/react": "^19.0.0",
+    "i18next": "26.3.6",
     "jsdom": "^26.0.0",
     "postcss": "^8.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-i18next": "15.7.3",
     "typescript": "^5.7.0",
     "vite": "^7.0.0",
     "vitest": "^3.0.0"

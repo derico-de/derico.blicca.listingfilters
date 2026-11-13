@@ -1,0 +1,27 @@
+{
+  "listingfilters": {
+    "settings": "Default",
+    "filters": "Filters",
+    "filterBy": "Filter the results by",
+    "batchSize": "Results per page",
+    "batchSizeHint": "Filters and the search cover every page. Maximum results still limits the whole listing.",
+    "filter": "Filter {{position}}",
+    "filterProperty": "Filter {{position}} property",
+    "filterTitle": "Filter {{position}} title",
+    "moveFilterUp": "Move filter {{position}} up",
+    "moveFilterDown": "Move filter {{position}} down",
+    "removeFilter": "Remove filter {{position}}",
+    "property": "Property",
+    "title": "Title",
+    "textSearch": "Text search",
+    "allowedValues": "Allowed values",
+    "moveValueUp": "Move {{value}} up",
+    "moveValueDown": "Move {{value}} down",
+    "removeValue": "Remove {{value}}",
+    "addValue": "Add value…",
+    "addValueToFilter": "Add an allowed value to filter {{position}}",
+    "noValuesChosen": "With none chosen, every value found in the results is offered.",
+    "propertiesNotLoaded": "The properties to filter by could not be loaded.",
+    "addFilter": "Add filter"
+  }
+}
