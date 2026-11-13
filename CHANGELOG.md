@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0a3 (unreleased)
+
+
+- Nothing changed yet.
+
+
 ## 1.0.0a2 (2026-11-13)
 
 - Frame each filter in the sidebar's **Filters** setting as a group of its
