@@ -678,7 +678,7 @@ wheels = [
 
 [[package]]
 name = "derico-blicca-listingfilters"
-version = "1.0.0a1.dev0"
+version = "1.0.0a2.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "plone" },
