@@ -22,8 +22,9 @@ export type ListingFiltersWidgetProps = {
   onChange?: (value: Filter[]) => void;
 };
 
-// The field faces are the host's classes. The layout around them is this
-// add-on's own, in styles.css under `.listing-filters-widget`.
+// The field faces and the filters' frames are the host's classes
+// (`aurora-group*`, auroraeditor's contract §1.13). The allowed values list
+// is this add-on's own, in styles.css under `.listing-filters-widget`.
 const labelClass = 'w-fit cursor-default text-xs font-medium text-quanta-pigeon';
 const controlClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground';
 const noteClass = 'listing-filters-widget-note text-xs font-normal text-quanta-pigeon';
@@ -77,14 +78,14 @@ function ItemActions({
   onRemove: () => void;
 }) {
   return (
-    <div className="listing-filters-widget-actions">
-      <button type="button" className="listing-filters-widget-action" aria-label={`Move ${subject} up`} disabled={index === 0} onClick={() => onMove(index - 1)}>
+    <div className="aurora-group-actions">
+      <button type="button" className="aurora-group-action" aria-label={`Move ${subject} up`} disabled={index === 0} onClick={() => onMove(index - 1)}>
         <Icon name="up" />
       </button>
-      <button type="button" className="listing-filters-widget-action" aria-label={`Move ${subject} down`} disabled={index === count - 1} onClick={() => onMove(index + 1)}>
+      <button type="button" className="aurora-group-action" aria-label={`Move ${subject} down`} disabled={index === count - 1} onClick={() => onMove(index + 1)}>
         <Icon name="down" />
       </button>
-      <button type="button" className="listing-filters-widget-action listing-filters-widget-remove" aria-label={`Remove ${subject}`} onClick={onRemove}>
+      <button type="button" className="aurora-group-action aurora-group-action-remove" aria-label={`Remove ${subject}`} onClick={onRemove}>
         <Icon name="remove" />
       </button>
     </div>
@@ -106,7 +107,7 @@ function AllowList({
   const titles = new Map(values);
   const unchosen = values.filter(([value]) => !allowList.includes(value));
   return (
-    <div className="listing-filters-widget-field">
+    <div className="aurora-group-field">
       <span className={labelClass}>Allowed values</span>
       {allowList.length ? (
         <ul className="listing-filters-widget-values">
@@ -173,7 +174,7 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
           {label}
         </span>
       ) : null}
-      <div className="listing-filters-widget-list">
+      <div className="aurora-group-list">
         {filters.map((filter, index) => {
           const position = index + 1;
           const property = properties.find(({ field }) => field === filter.field);
@@ -181,12 +182,12 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
           return (
             <div
               key={`${filter.field}:${index}`}
-              className="listing-filters-widget-filter"
+              className="aurora-group"
               role="group"
               aria-labelledby={`${filterId}-name`}
             >
-              <div className="listing-filters-widget-head">
-                <span id={`${filterId}-name`} className="listing-filters-widget-name">
+              <div className="aurora-group-head">
+                <span id={`${filterId}-name`} className="aurora-group-title">
                   Filter {position}
                 </span>
                 <ItemActions
@@ -197,7 +198,7 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
                   onRemove={() => update(filters.filter((_filter, i) => i !== index))}
                 />
               </div>
-              <div className="listing-filters-widget-field">
+              <div className="aurora-group-field">
                 <label htmlFor={`${filterId}-property`} className={labelClass}>
                   Property
                 </label>
@@ -218,7 +219,7 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
                     ))}
                 </select>
               </div>
-              <div className="listing-filters-widget-field">
+              <div className="aurora-group-field">
                 <label htmlFor={`${filterId}-title`} className={labelClass}>
                   Title
                 </label>
@@ -250,7 +251,7 @@ export function ListingFiltersWidget(props: ListingFiltersWidgetProps) {
         ) : null}
         <button
           type="button"
-          className="listing-filters-widget-add"
+          className="aurora-group-add"
           disabled={status === 'loading' || !unused.length}
           onClick={() => update([...filters, { field: unused[0].field, title: '', allowList: [] }])}
         >

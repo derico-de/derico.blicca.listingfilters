@@ -295,6 +295,7 @@ function measureFilterFrames(root) {
   const [lighter, darker] = [luminance(...ground, color(value)), luminance(...ground)].sort((a, b) => b - a);
   const firstField = first.querySelector('select');
   const actions = box(first.querySelector('[aria-label="Remove filter 1"]'));
+  const add = [...root.querySelectorAll('button')].find((button) => button.textContent === 'Add filter');
   return {
     filters: frames.length,
     gap: Math.round(box(second).top - box(first).bottom),
@@ -307,6 +308,8 @@ function measureFilterFrames(root) {
     actionsHeadTheFilter: actions.bottom <= box(firstField).top && actions.left > box(firstField).left,
     valuesStartAtTheFields: Math.round(box(value).left - box(firstField).left),
     valuesAreReadable: (lighter + 0.05) / (darker + 0.05) >= 4.5,
+    actionSize: `${Math.round(actions.width)}x${Math.round(actions.height)}`,
+    addIsADashedSlot: getComputedStyle(add).borderTopStyle === 'dashed' && Math.round(box(add).height) === 40,
   };
 }
 
@@ -319,6 +322,8 @@ async function expectFramedFilters(widget) {
   expectEqual(measured.actionsHeadTheFilter, true, 'a filter is headed by its actions, at the far end');
   expectEqual(measured.valuesStartAtTheFields, 0, 'the allowed values line up with the fields');
   expectEqual(measured.valuesAreReadable, true, 'an allowed value reads on the sidebar');
+  expectEqual(measured.actionSize, '28x28', "a filter's actions are the criteria's icon buttons");
+  expectEqual(measured.addIsADashedSlot, true, 'Add filter is the dashed slot the next filter goes into');
 }
 
 async function narrowOnTheCanvas(page, block, options) {

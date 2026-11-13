@@ -6,6 +6,9 @@
   own, headed by its number and its move and remove buttons, so a filter
   shows where it starts and ends. Its property gets a label, and the allowed
   values line up with the fields and read on the dark sidebar.
+- Take the filters' frames, actions and **Add filter** slot from
+  plone.blicca.auroraeditor's `aurora-group` classes, so the filters look
+  like the listing block's criteria and follow their changes.
 
 
 ## 1.0.0a1 (2026-11-09)

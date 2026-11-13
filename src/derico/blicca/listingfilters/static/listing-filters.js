@@ -202,10 +202,10 @@ function ItemActions({
   onMove,
   onRemove
 }) {
-  return /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-actions", children: [
-    /* @__PURE__ */ jsx("button", { type: "button", className: "listing-filters-widget-action", "aria-label": `Move ${subject} up`, disabled: index === 0, onClick: () => onMove(index - 1), children: /* @__PURE__ */ jsx(Icon, { name: "up" }) }),
-    /* @__PURE__ */ jsx("button", { type: "button", className: "listing-filters-widget-action", "aria-label": `Move ${subject} down`, disabled: index === count - 1, onClick: () => onMove(index + 1), children: /* @__PURE__ */ jsx(Icon, { name: "down" }) }),
-    /* @__PURE__ */ jsx("button", { type: "button", className: "listing-filters-widget-action listing-filters-widget-remove", "aria-label": `Remove ${subject}`, onClick: onRemove, children: /* @__PURE__ */ jsx(Icon, { name: "remove" }) })
+  return /* @__PURE__ */ jsxs("div", { className: "aurora-group-actions", children: [
+    /* @__PURE__ */ jsx("button", { type: "button", className: "aurora-group-action", "aria-label": `Move ${subject} up`, disabled: index === 0, onClick: () => onMove(index - 1), children: /* @__PURE__ */ jsx(Icon, { name: "up" }) }),
+    /* @__PURE__ */ jsx("button", { type: "button", className: "aurora-group-action", "aria-label": `Move ${subject} down`, disabled: index === count - 1, onClick: () => onMove(index + 1), children: /* @__PURE__ */ jsx(Icon, { name: "down" }) }),
+    /* @__PURE__ */ jsx("button", { type: "button", className: "aurora-group-action aurora-group-action-remove", "aria-label": `Remove ${subject}`, onClick: onRemove, children: /* @__PURE__ */ jsx(Icon, { name: "remove" }) })
   ] });
 }
 function AllowList({
@@ -217,7 +217,7 @@ function AllowList({
   const values = property?.values ?? [];
   const titles = new Map(values);
   const unchosen = values.filter(([value]) => !allowList.includes(value));
-  return /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-field", children: [
+  return /* @__PURE__ */ jsxs("div", { className: "aurora-group-field", children: [
     /* @__PURE__ */ jsx("span", { className: labelClass, children: "Allowed values" }),
     allowList.length ? /* @__PURE__ */ jsx("ul", { className: "listing-filters-widget-values", children: allowList.map((value, index) => {
       const title = titles.get(value) ?? value;
@@ -269,7 +269,7 @@ function ListingFiltersWidget(props) {
       "aria-labelledby": label ? labelId : void 0,
       children: [
         label ? /* @__PURE__ */ jsx("span", { id: labelId, className: labelClass, children: label }) : null,
-        /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-list", children: [
+        /* @__PURE__ */ jsxs("div", { className: "aurora-group-list", children: [
           filters.map((filter, index) => {
             const position = index + 1;
             const property = properties.find(({ field }) => field === filter.field);
@@ -277,12 +277,12 @@ function ListingFiltersWidget(props) {
             return /* @__PURE__ */ jsxs(
               "div",
               {
-                className: "listing-filters-widget-filter",
+                className: "aurora-group",
                 role: "group",
                 "aria-labelledby": `${filterId}-name`,
                 children: [
-                  /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-head", children: [
-                    /* @__PURE__ */ jsxs("span", { id: `${filterId}-name`, className: "listing-filters-widget-name", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "aurora-group-head", children: [
+                    /* @__PURE__ */ jsxs("span", { id: `${filterId}-name`, className: "aurora-group-title", children: [
                       "Filter ",
                       position
                     ] }),
@@ -297,7 +297,7 @@ function ListingFiltersWidget(props) {
                       }
                     )
                   ] }),
-                  /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-field", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "aurora-group-field", children: [
                     /* @__PURE__ */ jsx("label", { htmlFor: `${filterId}-property`, className: labelClass, children: "Property" }),
                     /* @__PURE__ */ jsxs(
                       "select",
@@ -314,7 +314,7 @@ function ListingFiltersWidget(props) {
                       }
                     )
                   ] }),
-                  /* @__PURE__ */ jsxs("div", { className: "listing-filters-widget-field", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "aurora-group-field", children: [
                     /* @__PURE__ */ jsx("label", { htmlFor: `${filterId}-title`, className: labelClass, children: "Title" }),
                     /* @__PURE__ */ jsx(
                       "input",
@@ -348,7 +348,7 @@ function ListingFiltersWidget(props) {
             "button",
             {
               type: "button",
-              className: "listing-filters-widget-add",
+              className: "aurora-group-add",
               disabled: status === "loading" || !unused.length,
               onClick: () => update([...filters, { field: unused[0].field, title: "", allowList: [] }]),
               children: [
